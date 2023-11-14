@@ -37,15 +37,16 @@ För att få lite variation har de också olika personlighetsdrag och humörsmä
 - Bänk (rymmer fler, betydligt sämre studiero)
 - Soffa (bättre komfort)
 - Mikrovågsugn
+- Matlåda (färsk/odiskad/möglig)
 - Ölkyl, behöver fyllas (kostar pengar) men sakerna kan säljas med vinst
 - Kassamaskin, låser upp tisdagspubar
 - Soppåse, behöver tömmas
-- Pantsäck, behöver tömmas, luktar illa om den inte töms
+- Pantsäck, behöver tömmas, luktar illa om den inte töms. Spawnar under pub/gasque.
 - Bardisk
 - Spis
 - Diskho
 - Diskställ
-- Diskmaskin
+- Diskmaskin, kräver stor mognad för att hantera.
 - Stor kastrull, används tillsammans med spisen för att laga gasquemat
 - Vanlig kyl, spawnar senap och mögliga matlådor
 - Dragkyl, används för att lagra överbliven gasquemat
@@ -53,13 +54,18 @@ För att få lite variation har de också olika personlighetsdrag och humörsmä
 - Läskkyl, komplement till godishyllan
 - Skafferi, kan användas tillsammans med spis + vanlig kyl för att skapa en lunch
 - Toalett
+  + Toapapper, behöver fyllas på. Tar det slut blir det inte bra...
 - Mopp och skurhink, svabbar bort klibbet efter en fest
 - Badkar, kan skapa ftmare.
 - Krukväxt, ökar trevnaden i en liten radie.
 - Gasquedekoration, ökar trevnaden under fest men minskar den i andra sammanhang.
 - Bokhylla, bonus till inluppar
 - Brädspelshylla, bonus till umgänge, framförallt under pubar, men stör annars
-- Klädhängare
+- Klädhängare + kläder
+- Flyttlådor, representerar "Bra att ha"-saker som funktionärer drar in. Kan ha en inventerings-lista med random prylar som nämnder använder men inte behöver få en egen sprite.
+- Kaffekokare, ökar studietakten men riskerar att svämma över när den används.
+- Vattenkokare. Ger Te under dagtid och pastavatten till pubbar. Kan börja brinna om den kokar torrt.
+- Bestick. Minskar spill på borden när folk äter. Försvinner långsamt, dubbla takten under gasque.
 - ...
 
 ### Händelser
@@ -68,21 +74,47 @@ För att få lite variation har de också olika personlighetsdrag och humörsmä
   - Målet är att maximera folks nöje/umgänge (positivt för studieorken), eller sin egen försäljning (pengar till nya möbler)
   - Blir en massa mat över som behöver hanteras
   - Smutsar ner, behöver svabbning
+  - Möbler som används riskerar att gå sönder.
 - Sektionsmöte
 - Besök
   - Akademiska hus
   - Väktare (framförallt under pub/gasque)
   - Föhsarinspring
   - Tillståndsenheten
+  - Random maskinare under en pub som man måste kasta ut
 - Random företag donerar jättemycket av:
   - Mat med kort utgångsdatum
   - Kollegieblock
   - Energidryck
 - Matförgiftning av gasquemat (salmonellagate)
 - Brand när spis eller mikro används
+- Städdagar. Sänker GKs bitterhet och ökar mognaden hos de som dyker upp. Lär ge buffs till det mesta så kanske måste nerfas på nått sätt?
+- SaFT:
+  - Ökar studieresultaten några procent.
+  - Gasque med 99 % omogna gäster.
+  - Besökare stjäl inventarier (skyltar).
+- Strömavbrott, om för många micros och vattenkokare används samtidigt.
+- Inbrott, stjäl billig öl från ölkylen och pantsäckar.
+- Tenta-period: Behövs extra studieplatser och inga fester. Går åt extra mycket i godisskåpet.
+  - Efter tenta-perioden blir folk äldre?
+- Mottagningen?
+  - Dyker upp extra många nollan och nya funktionärer som inte vet nånting.
+  - Varje morgon står det lite nya random prylar i entrén
+  - Varje dag försvinner det några random inventarier
+  - Extra mycket betalt från kansliet den veckan?
+- Ordförande från annan sektion dyker upp och vill:
+  - Låna gasque-bänkar (50% chans att två bänkar aldrig kommer tillbaka)
+  - Sova över i kons (10 % chans att nånting blir stulet, 10 % att alkoholtillståndet ryker)
+  - Byta jobbare till nån fest (sänker studieresultaten)
+  - (Det finns inga fördelar)
 
 ### Övrigt
-...
+- Transportmedel (köps in)
+  Behövs för att kunna köpa mat till pub/gasque och göra sig av med panten.
+  - Skrinda. Billig, låg lastkapacitet. 50% chans att gå sönder vid varje användning.
+  - Sektionsbilen. Dyr att köpa in, stor kapacitet. Omogna funktionärer har risk att krocka varvid bilen spenderar några dagar på verkstad vilket kostar pengar.
+  - Cykel-kärra. Mittemellan. Blir lätt stulen?
+  - Forrden. Billig och stor kapacitet. Kan bara köras av omogna funktionärer?
 
 ### MVP
 - GK och vanlig student
