@@ -17,8 +17,8 @@ class Controller {
             throw new Error("Multiple controllers exist: " + this._instances.length);
     }
 
-    static get WIDTH_PX() { return 1024; }
-    static get HEIGHT_PX() { return this.WIDTH_PX * 2 / 3; }
+    static get WIDTH_PX() { return null; }
+    static get HEIGHT_PX() { return null; }
     static get STORAGE_PREFIX() { return "kelvin_"; }
 
     constructor(
@@ -31,10 +31,17 @@ class Controller {
             cancelFFOnPause = false,
             // musicFF = true,
     ) {
+        if (!canvas) {
+            throw new Error("Canvas not provided");
+        }
         if (typeof (canvas) === "string")
             canvas = document.getElementById(canvas);
-        canvas.width = this.constructor.WIDTH_PX;
-        canvas.height = this.constructor.HEIGHT_PX;
+        if (this.constructor.WIDTH_PX !== null) {
+            canvas.width = this.constructor.WIDTH_PX;
+        }
+        if (this.constructor.HEIGHT_PX !== null) {
+            canvas.height = this.constructor.HEIGHT_PX;
+        }
         this.gameArea = new GameArea(canvas, gridWidth, gridHeight, gridOrigin);
         
         this.updateInterval = updateInterval;
