@@ -78,7 +78,6 @@ class Controller {
         this.muteButton = document.getElementById("muteButton");
         this.unmuteButton = document.getElementById("unmuteButton");
 
-
         if (this.playbutton)
             this.playbutton.onclick = this.togglePause.bind(this);
         if (this.ffbutton) {
