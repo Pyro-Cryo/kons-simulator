@@ -75,6 +75,7 @@ För att få lite variation har de också olika personlighetsdrag och humörsmä
   - Blir en massa mat över som behöver hanteras
   - Smutsar ner, behöver svabbning
   - Möbler som används riskerar att gå sönder.
+- Ordförande fyller år
 - Sektionsmöte
 - Besök
   - Akademiska hus
