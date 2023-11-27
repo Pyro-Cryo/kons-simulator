@@ -33,6 +33,7 @@ class Konstroller extends Controller {
     }
 
     onAssetsLoaded() {
+        new Clock();
         this.npc = new NPC(this.gameArea.gridWidth / 2, this.gameArea.gridHeight / 2);
         this.setMessage('> _');
         this.startDrawLoop();
