@@ -4,8 +4,11 @@
  */
 class LinkedList {
     constructor() {
+        /** @type {{obj: T} | null} */
         this.first = null;
+        /** @type {{obj: T} | null} */
         this.last = null;
+        /** @type {number} */
         this.count = 0;
     }
 
@@ -143,6 +146,7 @@ class LinkedList {
  */
 class Minheap {
     constructor() {
+        /** @type {{obj: T, weight: number}[]} */
         this.elements = [];
     }
 
