@@ -9,7 +9,7 @@ class Variable {
 class Modifier {
     static get RECOMPUTE_NEVER() { return 0; }
     static get RECOMPUTE_EACH_UPDATE() { return 1; }
-    static get RECOMPUTE_ALWAYS() { return 2; }
+    static get HIGHEST_RECOMPUTE_CADENCY() { return this.RECOMPUTE_EACH_UPDATE; }
 
     constructor(description = null, zeroAfter = Clock.NEVER, recomputePolicy = Modifier.RECOMPUTE_ALWAYS) {
         this.description = description;
@@ -44,10 +44,6 @@ class SimpleVariable extends Variable {
         this._modifiers = new LinkedList();
     }
 
-    get recomputePolicy() {
-        return Modifier.RECOMPUTE_ALWAYS;
-    }
-
     getValue() {
         let value = this.baseValue;
         let modifiersWereRemoved = false;
@@ -59,7 +55,7 @@ class SimpleVariable extends Variable {
             value += modifier.value();
         }
         if (modifiersWereRemoved) {
-            this.onModifiersWereRemoved(/*dueToExpiration=*/true);
+            this.onModifiersWereRemoved();
         }
 
         return Math.max(Math.min(value, this.max), this.min);
@@ -81,52 +77,37 @@ class SimpleVariable extends Variable {
      */
     removeModifier(modifier) {
         this._modifiers.remove(modifier);
-        this.onModifiersWereRemoved(/*dueToExpiration=*/false);
+        this.onModifiersWereRemoved();
     }
 
-    /**
-     * @param {boolean} dueToExpiration 
-     */
-    onModifiersWereRemoved(dueToExpiration) {}
+    onModifiersWereRemoved() {}
 }
 
 
 /**
- * A variable whose value is only recomputed when necessary.
- * Manually removing a modifier is costly - prefer letting them expire if possible.
-*/
+ * A variable whose value is only recomputed once per update.
+ */
 class CachedVariable extends SimpleVariable {
     constructor(title, baseValue = 0, description = null, min = 0, max = 100, unit = '%') {
         super(title, baseValue, description, min, max, unit);
+        /** @type {number | null} */
         this._cachedValue = null;
         this._lastRecomputed = Clock.NEVER;
         this._recomputePolicy = Modifier.RECOMPUTE_NEVER;
-        /** @type {Minheap<null>} */
-        this._expirations = new Minheap();
     }
 
     get recomputePolicy() {
         return this._recomputePolicy;
     }
 
-    _pruneExpirations() {
-        while (!this._expirations.isEmpty() && this._expirations.peekWeight() <= Clock.now) {
-            this._expirations.pop();
-        }
-    }
-
     getValue() {
         if (this._cachedValue === null
-                || (!this._expirations.isEmpty()
-                        && this._expirations.peekWeight() <= Clock.now)
-                || this._recomputePolicy === Modifier.RECOMPUTE_ALWAYS
                 || (this._recomputePolicy === Modifier.RECOMPUTE_EACH_UPDATE
                         && this._lastRecomputed !== Clock.now)
                 
         ) {
             this._cachedValue = super.getValue();
             this._lastRecomputed = Clock.now;
-            this._pruneExpirations();
         }
         return this._cachedValue;
     }
@@ -137,31 +118,21 @@ class CachedVariable extends SimpleVariable {
     addModifier(modifier) {
         super.addModifier(modifier);
         this._cachedValue = null;
-        if (modifier.zeroAfter !== Clock.NEVER) {
-            this._expirations.push(null, modifier.zeroAfter);
-        }
         if (modifier.recomputePolicy > this._recomputePolicy) {
             this._recomputePolicy = modifier.recomputePolicy;
         }
     }
 
-    onModifiersWereRemoved(dueToExpiration) {
+    onModifiersWereRemoved() {
         this._cachedValue = null;
-        if (!dueToExpiration) {
-            this._expirations = new Minheap();
-        }
         this._recomputePolicy = Modifier.RECOMPUTE_NEVER;
         for (const modifier of this._modifiers) {
             if (modifier.recomputePolicy > this._recomputePolicy) {
                 this._recomputePolicy = modifier.recomputePolicy;
+                if (this._recomputePolicy === Modifier.HIGHEST_RECOMPUTE_CADENCY) {
+                    break;
+                }
             }
-            if (!dueToExpiration && modifier.zeroAfter !== Clock.NEVER) {
-                this._expirations.push(null, modifier.zeroAfter)
-            }
-        }
-
-        if (dueToExpiration) {
-            this._pruneExpirations();
         }
     }
 }
@@ -208,24 +179,6 @@ class LinearRampModifier extends Modifier {
 }
 
 
-/** Calls a callback to determine the value. */
-class CallbackModifier extends Modifier {
-    /**
-     * @param {function():number} callback
-     * @param {string} description
-     * @param {number} zeroAfter
-     */
-    constructor(callback, description = null, zeroAfter = Clock.NEVER) {
-        super(description, zeroAfter, Modifier.RECOMPUTE_ALWAYS);
-        this.callback = callback;
-    }
-
-    value() {
-        return this.callback();
-    }
-}
-
-
 /**
  * A variable whose value is a combination of other variables.
  * No circular dependencies, please.
@@ -238,6 +191,10 @@ class DerivedVariable extends Variable {
     constructor(combiner, variables) {
         this.combiner = combiner;
         this.variables = variables;
+    }
+
+    getValue() {
+        return this.combiner(...this.variables);
     }
 
     /**
@@ -274,10 +231,6 @@ class DerivedVariable extends Variable {
             throw new Error('Expected at least one variable');
         }
         return new DerivedVariable(Math.min, terms);
-    }
-
-    getValue() {
-        return this.combiner(...this.variables);
     }
 }
 
