@@ -1,0 +1,486 @@
+{
+	"parts": {
+		"bodies": [
+			{"front": "FemaleBody-Front", "right": "FemaleBody-Right", "back": "FemaleBody-Back" },
+			{"front": "MaleBody-Front", "right": "MaleBody-Right", "back": "MaleBody-Back" }
+		],
+		"arms": [
+			{"front": "Arms-Front", "right": "Arms-Right", "back": "Arms-Back" }
+		],
+		"legs": [
+			{"front": "Legs-Front%d", "right": "Legs-Right%d", "back": "Legs-Back%d", "animation": ["1", "2", "1", "3"] }
+		],
+		"feet": [
+			{"front": "Feet-Front%d", "right": "Feet-Right%d", "back": "Feet-Back%d", "animation": ["1", "2", "1", "3"] }
+		],
+		"face": [
+			{"front": "OuterEye-Front", "right": "OuterEye-Right", "back": "blank" },
+			{"front": "EyeColor-Front", "right": "EyeColor-Right", "back": "blank" },
+			{"front": "EyeLash-Front", "right": "EyeLash-Right", "back": "blank" },
+			{"front": "blank", "right": "Nose-Right", "back": "blank" }
+		],
+		"hairs": [
+			{"front": "Afro-Front", "right": "Afro-Right", "back": "Afro-Back" },
+			{"front": "Balding-Front", "right": "Balding-Right", "back": "Balding-Back" },
+			{"front": "Bun-Front", "right": "Bun-Right", "back": "Bun-Back" },
+			{"front": "LongWavy-Front", "right": "LongWavy-Right", "back": "LongWavy-Back" },
+			{"front": "PonyTail-Front", "right": "PonyTail-Right", "back": "PonyTail-Back" },
+			{"front": "Regular-Front", "right": "Regular-Right", "back": "Regular-Back" },
+			{"front": "Spiked-Front", "right": "Spiked-Right", "back": "Spiked-Back" },
+			{"front": "Straight-Front", "right": "Straight-Right", "back": "Straight-Back" },
+			{"front": "TruckerHat-Front", "right": "TruckerHat-Right", "back": "TruckerHat-Back" },
+			{"front": "zDreads-Front", "right": "zDreads-Right", "back": "zDreads-Back" }
+		],
+		"accessories": [
+			{"front": "LipStick-Front", "right": "LipStick-Right", "back": "blank" },
+			{"front": "Blush-Front", "right": "Blush-Right", "back": "blank" },
+			{"front": "Beard-Front", "right": "Beard-Right", "back": "blank" },
+			{"front": "Earrings-Front", "right": "Earrings-Right", "back": "Earrings-Back" },
+			{"front": "Glasses-Front", "right": "Glasses-Right", "back": "blank" },
+			{"front": "Hairband-Front", "right": "Hairband-Right", "back": "Hairband-Back" }
+		]
+	},
+
+	"sprites": [
+		{
+			"name": "blank",
+			"spriteColorRect": { "x": 0, "y": 0, "width": 40, "height": 40 },
+			"textureRect": { "x": 0, "y": 0, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Afro-Back",
+			"spriteColorRect": { "x": 2, "y": 2, "width": 36, "height": 30 },
+			"textureRect": { "x": 42, "y": 0, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Afro-Front",
+			"spriteColorRect": { "x": 2, "y": 2, "width": 36, "height": 26 },
+			"textureRect": { "x": 84, "y": 0, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Afro-Right",
+			"spriteColorRect": { "x": 1, "y": 2, "width": 36, "height": 30 },
+			"textureRect": { "x": 126, "y": 0, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Arms-Back",
+			"spriteColorRect": { "x": 5, "y": 27, "width": 30, "height": 8 },
+			"textureRect": { "x": 168, "y": 0, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Arms-Front",
+			"spriteColorRect": { "x": 5, "y": 28, "width": 30, "height": 6 },
+			"textureRect": { "x": 210, "y": 0, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Arms-Right",
+			"spriteColorRect": { "x": 14, "y": 31, "width": 8, "height": 8 },
+			"textureRect": { "x": 252, "y": 0, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Balding-Back",
+			"spriteColorRect": { "x": 5, "y": 18, "width": 30, "height": 10 },
+			"textureRect": { "x": 294, "y": 0, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Balding-Front",
+			"spriteColorRect": { "x": 4, "y": 17, "width": 32, "height": 10 },
+			"textureRect": { "x": 336, "y": 0, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Balding-Right",
+			"spriteColorRect": { "x": 4, "y": 15, "width": 18, "height": 14 },
+			"textureRect": { "x": 378, "y": 0, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Beard-Front",
+			"spriteColorRect": { "x": 15, "y": 26, "width": 10, "height": 2 },
+			"textureRect": { "x": 420, "y": 0, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Beard-Right",
+			"spriteColorRect": { "x": 23, "y": 25, "width": 6, "height": 4 },
+			"textureRect": { "x": 462, "y": 0, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Blush-Front",
+			"spriteColorRect": { "x": 12, "y": 24, "width": 16, "height": 2 },
+			"textureRect": { "x": 0, "y": 42, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Blush-Right",
+			"spriteColorRect": { "x": 23, "y": 23, "width": 2, "height": 2 },
+			"textureRect": { "x": 42, "y": 42, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Bun-Back",
+			"spriteColorRect": { "x": 6, "y": 6, "width": 28, "height": 26 },
+			"textureRect": { "x": 84, "y": 42, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Bun-Front",
+			"spriteColorRect": { "x": 6, "y": 6, "width": 28, "height": 16 },
+			"textureRect": { "x": 126, "y": 42, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Bun-Right",
+			"spriteColorRect": { "x": 3, "y": 6, "width": 30, "height": 24 },
+			"textureRect": { "x": 168, "y": 42, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Earrings-Back",
+			"spriteColorRect": { "x": 6, "y": 22, "width": 28, "height": 2 },
+			"textureRect": { "x": 210, "y": 42, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Earrings-Front",
+			"spriteColorRect": { "x": 6, "y": 22, "width": 28, "height": 2 },
+			"textureRect": { "x": 252, "y": 42, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Earrings-Right",
+			"spriteColorRect": { "x": 15, "y": 23, "width": 2, "height": 2 },
+			"textureRect": { "x": 294, "y": 42, "width": 40, "height": 40 }
+		},
+		{
+			"name": "EyeColor-Front",
+			"spriteColorRect": { "x": 15, "y": 24, "width": 10, "height": 2 },
+			"textureRect": { "x": 336, "y": 42, "width": 40, "height": 40 }
+		},
+		{
+			"name": "EyeColor-Right",
+			"spriteColorRect": { "x": 26, "y": 23, "width": 2, "height": 2 },
+			"textureRect": { "x": 378, "y": 42, "width": 40, "height": 40 }
+		},
+		{
+			"name": "EyeLash-Front",
+			"spriteColorRect": { "x": 13, "y": 22, "width": 14, "height": 2 },
+			"textureRect": { "x": 420, "y": 42, "width": 40, "height": 40 }
+		},
+		{
+			"name": "EyeLash-Right",
+			"spriteColorRect": { "x": 24, "y": 19, "width": 4, "height": 2 },
+			"textureRect": { "x": 462, "y": 42, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Feet-Back-1",
+			"spriteColorRect": { "x": 13, "y": 36, "width": 14, "height": 4 },
+			"textureRect": { "x": 0, "y": 84, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Feet-Back-2",
+			"spriteColorRect": { "x": 10, "y": 36, "width": 20, "height": 4 },
+			"textureRect": { "x": 42, "y": 84, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Feet-Back-3",
+			"spriteColorRect": { "x": 12, "y": 36, "width": 14, "height": 4 },
+			"textureRect": { "x": 84, "y": 84, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Feet-Front-1",
+			"spriteColorRect": { "x": 11, "y": 36, "width": 16, "height": 4 },
+			"textureRect": { "x": 126, "y": 84, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Feet-Front-2",
+			"spriteColorRect": { "x": 10, "y": 36, "width": 20, "height": 4 },
+			"textureRect": { "x": 168, "y": 84, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Feet-Front-3",
+			"spriteColorRect": { "x": 12, "y": 36, "width": 16, "height": 4 },
+			"textureRect": { "x": 210, "y": 84, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Feet-Right-1",
+			"spriteColorRect": { "x": 12, "y": 36, "width": 16, "height": 4 },
+			"textureRect": { "x": 252, "y": 84, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Feet-Right-2",
+			"spriteColorRect": { "x": 13, "y": 36, "width": 14, "height": 4 },
+			"textureRect": { "x": 294, "y": 84, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Feet-Right-3",
+			"spriteColorRect": { "x": 12, "y": 36, "width": 16, "height": 4 },
+			"textureRect": { "x": 336, "y": 84, "width": 40, "height": 40 }
+		},
+		{
+			"name": "FemaleBody-Back",
+			"spriteColorRect": { "x": 10, "y": 27, "width": 20, "height": 8 },
+			"textureRect": { "x": 378, "y": 84, "width": 40, "height": 40 }
+		},
+		{
+			"name": "FemaleBody-Front",
+			"spriteColorRect": { "x": 9, "y": 27, "width": 22, "height": 8 },
+			"textureRect": { "x": 420, "y": 84, "width": 40, "height": 40 }
+		},
+		{
+			"name": "FemaleBody-Right",
+			"spriteColorRect": { "x": 12, "y": 30, "width": 14, "height": 8 },
+			"textureRect": { "x": 462, "y": 84, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Glasses-Front",
+			"spriteColorRect": { "x": 6, "y": 19, "width": 28, "height": 6 },
+			"textureRect": { "x": 0, "y": 126, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Glasses-Right",
+			"spriteColorRect": { "x": 17, "y": 18, "width": 14, "height": 6 },
+			"textureRect": { "x": 42, "y": 126, "width": 40, "height": 40 }
+		},
+		{
+			"name": "HairBand-Front",
+			"spriteColorRect": { "x": 7, "y": 6, "width": 26, "height": 6 },
+			"textureRect": { "x": 84, "y": 126, "width": 40, "height": 40 }
+		},
+		{
+			"name": "HairBand-Right",
+			"spriteColorRect": { "x": 16, "y": 5, "width": 8, "height": 16 },
+			"textureRect": { "x": 126, "y": 126, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Head-Back",
+			"spriteColorRect": { "x": 5, "y": 6, "width": 30, "height": 26 },
+			"textureRect": { "x": 168, "y": 126, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Head-Front",
+			"spriteColorRect": { "x": 5, "y": 6, "width": 30, "height": 26 },
+			"textureRect": { "x": 210, "y": 126, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Head-Right",
+			"spriteColorRect": { "x": 5, "y": 6, "width": 28, "height": 26 },
+			"textureRect": { "x": 252, "y": 126, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Nose-Right",
+			"spriteColorRect": { "x": 28, "y": 25, "width": 4, "height": 4 },
+			"textureRect": { "x": 294, "y": 126, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Legs-Back1",
+			"spriteColorRect": { "x": 11, "y": 35, "width": 18, "height": 4 },
+			"textureRect": { "x": 336, "y": 126, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Legs-Back2",
+			"spriteColorRect": { "x": 11, "y": 35, "width": 18, "height": 2 },
+			"textureRect": { "x": 378, "y": 126, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Legs-Back3",
+			"spriteColorRect": { "x": 11, "y": 35, "width": 18, "height": 4 },
+			"textureRect": { "x": 420, "y": 126, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Legs-Front1",
+			"spriteColorRect": { "x": 11, "y": 34, "width": 18, "height": 6 },
+			"textureRect": { "x": 462, "y": 126, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Legs-Front2",
+			"spriteColorRect": { "x": 11, "y": 35, "width": 18, "height": 2 },
+			"textureRect": { "x": 0, "y": 168, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Legs-Front3",
+			"spriteColorRect": { "x": 11, "y": 35, "width": 18, "height": 4 },
+			"textureRect": { "x": 42, "y": 168, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Legs-Right1",
+			"spriteColorRect": { "x": 12, "y": 35, "width": 14, "height": 2 },
+			"textureRect": { "x": 84, "y": 168, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Legs-Right2",
+			"spriteColorRect": { "x": 12, "y": 35, "width": 14, "height": 2 },
+			"textureRect": { "x": 126, "y": 168, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Legs-Right3",
+			"spriteColorRect": { "x": 12, "y": 35, "width": 14, "height": 2 },
+			"textureRect": { "x": 168, "y": 168, "width": 40, "height": 40 }
+		},
+		{
+			"name": "LipStick-Front",
+			"spriteColorRect": { "x": 18, "y": 27, "width": 4, "height": 2 },
+			"textureRect": { "x": 210, "y": 168, "width": 40, "height": 40 }
+		},
+		{
+			"name": "LipStick-Right",
+			"spriteColorRect": { "x": 25, "y": 26, "width": 2, "height": 2 },
+			"textureRect": { "x": 252, "y": 168, "width": 40, "height": 40 }
+		},
+		{
+			"name": "LongWavy-Back",
+			"spriteColorRect": { "x": 5, "y": 6, "width": 30, "height": 30 },
+			"textureRect": { "x": 294, "y": 168, "width": 40, "height": 40 }
+		},
+		{
+			"name": "LongWavy-Front",
+			"spriteColorRect": { "x": 5, "y": 6, "width": 30, "height": 30 },
+			"textureRect": { "x": 336, "y": 168, "width": 40, "height": 40 }
+		},
+		{
+			"name": "LongWavy-Right",
+			"spriteColorRect": { "x": 5, "y": 5, "width": 28, "height": 30 },
+			"textureRect": { "x": 378, "y": 168, "width": 40, "height": 40 }
+		},
+		{
+			"name": "MaleBody-Back",
+			"spriteColorRect": { "x": 9, "y": 27, "width": 22, "height": 8 },
+			"textureRect": { "x": 420, "y": 168, "width": 40, "height": 40 }
+		},
+		{
+			"name": "MaleBody-Front",
+			"spriteColorRect": { "x": 9, "y": 27, "width": 22, "height": 8 },
+			"textureRect": { "x": 462, "y": 168, "width": 40, "height": 40 }
+		},
+		{
+			"name": "MaleBody-Right",
+			"spriteColorRect": { "x": 11, "y": 30, "width": 16, "height": 8 },
+			"textureRect": { "x": 0, "y": 210, "width": 40, "height": 40 }
+		},
+		{
+			"name": "OuterEye-Front",
+			"spriteColorRect": { "x": 14, "y": 23, "width": 12, "height": 4 },
+			"textureRect": { "x": 42, "y": 210, "width": 40, "height": 40 }
+		},
+		{
+			"name": "OuterEye-Right",
+			"spriteColorRect": { "x": 25, "y": 20, "width": 4, "height": 6 },
+			"textureRect": { "x": 84, "y": 210, "width": 40, "height": 40 }
+		},
+		{
+			"name": "PonyTail-Back",
+			"spriteColorRect": { "x": 6, "y": 6, "width": 28, "height": 28 },
+			"textureRect": { "x": 126, "y": 210, "width": 40, "height": 40 }
+		},
+		{
+			"name": "PonyTail-Front",
+			"spriteColorRect": { "x": 3, "y": 6, "width": 32, "height": 16 },
+			"textureRect": { "x": 168, "y": 210, "width": 40, "height": 40 }
+		},
+		{
+			"name": "PonyTail-Right",
+			"spriteColorRect": { "x": 1, "y": 6, "width": 32, "height": 28 },
+			"textureRect": { "x": 210, "y": 210, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Regular-Back",
+			"spriteColorRect": { "x": 6, "y": 6, "width": 28, "height": 26 },
+			"textureRect": { "x": 252, "y": 210, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Regular-Front",
+			"spriteColorRect": { "x": 6, "y": 5, "width": 28, "height": 20 },
+			"textureRect": { "x": 294, "y": 210, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Regular-Right",
+			"spriteColorRect": { "x": 5, "y": 5, "width": 28, "height": 24 },
+			"textureRect": { "x": 336, "y": 210, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Spiked-Back",
+			"spriteColorRect": { "x": 4, "y": 4, "width": 32, "height": 26 },
+			"textureRect": { "x": 378, "y": 210, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Spiked-Front",
+			"spriteColorRect": { "x": 4, "y": 4, "width": 32, "height": 20 },
+			"textureRect": { "x": 420, "y": 210, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Spiked-Right",
+			"spriteColorRect": { "x": 3, "y": 4, "width": 32, "height": 26 },
+			"textureRect": { "x": 462, "y": 210, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Straight-Back",
+			"spriteColorRect": { "x": 6, "y": 6, "width": 28, "height": 30 },
+			"textureRect": { "x": 0, "y": 252, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Straight-Front",
+			"spriteColorRect": { "x": 6, "y": 6, "width": 28, "height": 24 },
+			"textureRect": { "x": 42, "y": 252, "width": 40, "height": 40 }
+		},
+		{
+			"name": "Straight-Right",
+			"spriteColorRect": { "x": 5, "y": 7, "width": 28, "height": 26 },
+			"textureRect": { "x": 84, "y": 252, "width": 40, "height": 40 }
+		},
+		{
+			"name": "TruckerHat-Back",
+			"spriteColorRect": { "x": 5, "y": 4, "width": 28, "height": 20 },
+			"textureRect": { "x": 126, "y": 252, "width": 40, "height": 40 }
+		},
+		{
+			"name": "TruckerHat-Front",
+			"spriteColorRect": { "x": 6, "y": 4, "width": 28, "height": 20 },
+			"textureRect": { "x": 168, "y": 252, "width": 40, "height": 40 }
+		},
+		{
+			"name": "TruckerHat-Right",
+			"spriteColorRect": { "x": 5, "y": 4, "width": 30, "height": 18 },
+			"textureRect": { "x": 210, "y": 252, "width": 40, "height": 40 }
+		},
+		{
+			"name": "ZombieArms-Back",
+			"spriteColorRect": { "x": 10, "y": 29, "width": 20, "height": 8 },
+			"textureRect": { "x": 252, "y": 252, "width": 40, "height": 40 }
+		},
+		{
+			"name": "ZombieArms-Front",
+			"spriteColorRect": { "x": 5, "y": 27, "width": 30, "height": 12 },
+			"textureRect": { "x": 294, "y": 252, "width": 40, "height": 40 }
+		},
+		{
+			"name": "ZombieArms-Right",
+			"spriteColorRect": { "x": 3, "y": 27, "width": 30, "height": 8 },
+			"textureRect": { "x": 336, "y": 252, "width": 40, "height": 40 }
+		},
+		{
+			"name": "ZombieEyes-Front",
+			"spriteColorRect": { "x": 5, "y": 13, "width": 24, "height": 14 },
+			"textureRect": { "x": 378, "y": 252, "width": 40, "height": 40 }
+		},
+		{
+			"name": "ZombieEyes-Right",
+			"spriteColorRect": { "x": 23, "y": 19, "width": 6, "height": 8 },
+			"textureRect": { "x": 420, "y": 252, "width": 40, "height": 40 }
+		},
+		{
+			"name": "ZombieNose-Front",
+			"spriteColorRect": { "x": 18, "y": 26, "width": 4, "height": 4 },
+			"textureRect": { "x": 462, "y": 252, "width": 40, "height": 40 }
+		},
+		{
+			"name": "ZombieNose-Right",
+			"spriteColorRect": { "x": 28, "y": 25, "width": 2, "height": 2 },
+			"textureRect": { "x": 0, "y": 294, "width": 40, "height": 40 }
+		},
+		{
+			"name": "zDreads-Back",
+			"spriteColorRect": { "x": 4, "y": 4, "width": 32, "height": 36 },
+			"textureRect": { "x": 42, "y": 294, "width": 40, "height": 40 }
+		},
+		{
+			"name": "zDreads-Front",
+			"spriteColorRect": { "x": 4, "y": 5, "width": 32, "height": 34 },
+			"textureRect": { "x": 84, "y": 294, "width": 40, "height": 40 }
+		},
+		{
+			"name": "zDreads-Right",
+			"spriteColorRect": { "x": 4, "y": 6, "width": 30, "height": 28 },
+			"textureRect": { "x": 126, "y": 294, "width": 40, "height": 40 }
+		},
+	]
+}
