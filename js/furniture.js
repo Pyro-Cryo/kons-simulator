@@ -1,0 +1,3 @@
+class Furniture extends GameObject {
+
+}

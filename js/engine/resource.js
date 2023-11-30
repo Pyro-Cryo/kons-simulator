@@ -198,9 +198,9 @@ class Resource {
 						this._loadedAssets.set(assetSpec[0], item);
 						return item;
 					},
-					error => {
-						alert("Fel för " + assetSpec[0]);
-						alert(error);
+					info => {
+						const error = new Error(`Failed to load asset ${assetSpec[0]} as ${assetSpec[1][0].name}`);
+						error.additionalInfo = info;
 						throw error;
 					}
 				])

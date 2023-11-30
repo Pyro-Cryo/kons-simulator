@@ -1,4 +1,4 @@
-# Kons-Sim
+# [Kons-Sim](https://pyro-cryo.github.io/kons-simulator/)
 *"Sektionen måste drivas mer som ett företag" - Anonym Ordförande*
 
 Som nybliven managementkonsult på $konsultbolag är ditt första uppdrag att styra upp Fysiksektionen. Året är 2016 och sektionen har precis flyttat ut ur barackerna på Kemigården, men kassan är tom och det nya Konsulatet är inte inrett ännu. Nu är det upp till dig att tillgodose studenternas krav på mikrovågsugnar, studieplatser, och tisdagspubar - allt för att maximera Genomströmningen™.
@@ -75,6 +75,7 @@ För att få lite variation har de också olika personlighetsdrag och humörsmä
   - Blir en massa mat över som behöver hanteras
   - Smutsar ner, behöver svabbning
   - Möbler som används riskerar att gå sönder.
+- Ordförande fyller år
 - Sektionsmöte
 - Besök
   - Akademiska hus
