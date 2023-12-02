@@ -1,4 +1,18 @@
 class Variable {
+    /** @returns {string | null} */
+    static get title() { return null; }
+    /** @returns {string | null} */
+    static get description() { return null; }
+
+    /**
+     * @param {string | null} title 
+     * @param {string | null} description 
+     */
+    constructor(title = null, description = null) {
+        this.title = title ?? this.constructor.title;
+        this.description = description ?? this.constructor.description;
+    }
+
     /** @returns {number} The current value of the variable. */
     getValue() {
         throw new Error('Not implemented');
@@ -32,14 +46,21 @@ class Modifier {
 
 /** Simple variable implementation that does no caching. */
 class SimpleVariable extends Variable {
-    constructor(title, baseValue = 0, description = null, min = 0, max = 100, unit = '%') {
-        super();
-        this.baseValue = baseValue;
-        this.title = title;
-        this.description = description;
-        this.min = min;
-        this.max = max;
-        this.unit = unit;
+    /** @returns {number} */
+    static get baseValue() { return 0; }
+    /** @returns {number} */
+    static get min() { return 0; }
+    /** @returns {number} */
+    static get max() { return 100; }
+    /** @returns {string | null} */
+    static get unit() { return '%'; }
+
+    constructor(title = null, baseValue = null, description = null, min = null, max = null, unit = null) {
+        super(title, description);
+        this.baseValue = baseValue ?? this.constructor.baseValue;
+        this.min = min ?? this.constructor.min;
+        this.max = max ?? this.constructor.max;
+        this.unit = unit ?? this.constructor.unit;
         /** @type {LinkedList<Modifier>} */
         this._modifiers = new LinkedList();
     }
@@ -62,7 +83,8 @@ class SimpleVariable extends Variable {
     }
 
     toString() {
-        return this.currentValue.toFixed(0) + this.unit;
+        const rounded = this.getValue().toFixed(0);
+        return this.unit ? rounded + this.unit : rounded;
     }
 
     /**
@@ -88,7 +110,7 @@ class SimpleVariable extends Variable {
  * A variable whose value is only recomputed once per update.
  */
 class CachedVariable extends SimpleVariable {
-    constructor(title, baseValue = 0, description = null, min = 0, max = 100, unit = '%') {
+    constructor(title = null, baseValue = null, description = null, min = null, max = null, unit = null) {
         super(title, baseValue, description, min, max, unit);
         /** @type {number | null} */
         this._cachedValue = null;
@@ -189,6 +211,7 @@ class DerivedVariable extends Variable {
      * @param {Variable[]} variables 
      */
     constructor(combiner, variables) {
+        super();
         this.combiner = combiner;
         this.variables = variables;
     }

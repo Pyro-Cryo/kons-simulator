@@ -6,6 +6,6 @@ class NPC extends GameObject {
 
     constructor(x, y) {
         super(x, y);
-        this.hunger = new CachedVariable('Hunger', 100);
+        this.hunger = new Hunger();
     }
 }
