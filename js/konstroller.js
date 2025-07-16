@@ -24,6 +24,7 @@ class Konstroller extends Controller {
             buttonTemplate: document.getElementById('buttonTemplate'),
         };
         this.setupElements();
+        this.inspector = new Inspector();
     }
 
     setupElements() {
@@ -40,6 +41,7 @@ class Konstroller extends Controller {
         // TODO: Maybe remove (start paused)?
         this.onPlay();
         
+        this.inspector.open(this.npc);
         const lunchbox = Lunchbox.create();
         const tryEatLunchbox = () => {
             console.log("Trying to eat lunch box");

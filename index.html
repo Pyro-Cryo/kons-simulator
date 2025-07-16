@@ -34,6 +34,7 @@
 	<script type="text/javascript" src="js/commonVariables.js"></script>
 	<script type="text/javascript" src="js/npc.js"></script>
 	<script type="text/javascript" src="js/furniture.js"></script>
+	<script type="text/javascript" src="js/inspector.js"></script>
 
 	<!-- Controller -->
 	<script type="text/javascript" src="js/konstroller.js"></script>
@@ -85,7 +86,27 @@
             <div id="messageBox" class="console">&gt;&nbsp;_</div>
         </div>
         <div class="menus">
-            TODO: Lägg till struktur för köpmenyerna
+            <div id="inspector" class="hidden">
+				<div id="inspectorPrimaryInfo">
+					<div id="inspectorSpriteContainer" class="hidden">
+						<canvas id="inspectorSprite"></canvas>
+					</div>
+					<div>
+						<div id="inspectorTitle">Title</div>
+						<div id="inspectorDescription">Description</div>
+						<div id="inspectorCurrentAction">Current action</div>
+					</div>
+				</div>
+				<div id="inspectorSecondaryInfo">
+					<div id="inspectorVariables">
+						<div class="hidden template">
+							<div class="title"></div>
+							<!-- TODO: Vore snyggare med bars där det är möjligt -->
+							<div class="value"></div>
+						</div>
+					</div>
+				</div>
+			</div>
         </div>
     </div>
 

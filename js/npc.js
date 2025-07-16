@@ -1,4 +1,9 @@
 class BusyMetadata {
+    /**
+     * @param {string|null} actionDescription 
+     * @param {number|null} startedAt 
+     * @param {number|null} endsAt 
+     */
     constructor(
         actionDescription = null,
         startedAt = null,
@@ -42,7 +47,9 @@ class NPC extends GameObject {
         );
         this.mood = new DerivedVariable(
             (hunger, modifiers) => Math.max(Math.min(hunger + modifiers, 100), 0), 
-            [this.hunger, this.moodModifiers]
+            [this.hunger, this.moodModifiers],
+            "Humör",
+            "Hur lycklig personen är",
         );
     }
 
@@ -63,13 +70,10 @@ class NPC extends GameObject {
             throw new Error(`NPC ${this} already busy: ${this.busyMetadata}`);
         }
         if (gameMinutes <= 0) {
-            console.log("Unbusying immediately");
             return this;
         }
         this.busyMetadata = new BusyMetadata(description, Clock.now(), Clock.after(gameMinutes));
-        console.log(`Waiting for ${gameMinutes} game minutes`);
         await Clock.waitFor(gameMinutes);
-        console.log("Done");
         this.busyMetadata = null;
         return this;
     }

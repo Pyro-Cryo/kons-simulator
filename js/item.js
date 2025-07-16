@@ -61,6 +61,14 @@ class Item extends GameObject {
         return this._interfaces.get(type);
     }
 
+    /**
+     * @param {typeof Interface} type
+     * @returns {Interface|null}
+     */
+    maybeGetInterface(type) {
+        return this._interfaces.get(type) ?? null;
+    }
+
     get [Symbol.toStringTag]() {
         return `${this.constructor.name} (${this.title})`;
     }
@@ -92,11 +100,15 @@ class Usable extends Interface {
     static get NUM_USES() { return 1; }
     // The time it takes to use the item, in game minutes.
     static get MINUTES_PER_USE() { return 1; }
+    // A description displayed on the NPC when the item is in use.
+    // Should be on the form "Eating lunchbox" or "Washing dishes".
+    static get ACTION_DESCRIPTION() { return null; }
 
-    constructor(numUses = null, minutesPerUse = null) {
+    constructor(numUses = null, minutesPerUse = null, actionDescription = null) {
         super();
         this.remainingUses = numUses ?? this.constructor.NUM_USES;
         this.minutesPerUse = minutesPerUse ?? this.constructor.MINUTES_PER_USE;
+        this.actionDescription = actionDescription ?? this.constructor.ACTION_DESCRIPTION;
         this.isInUse = false;
 
         if (this.remainingUses <= 0) {
@@ -129,7 +141,7 @@ class Usable extends Interface {
      * Decrements the remaining uses and calls the onUsed and onUsedUp methods as necessary.
      * @param {NPC} npc
      */
-    use(npc, description = null) {
+    use(npc) {
         if (!this.canUse(npc)) {
             throw new Error(`Item ${this.item} cannot be used by ${npc}`);
         }
@@ -143,12 +155,10 @@ class Usable extends Interface {
             }
         };
         if (gameMinutesToUse <= 0) {
-            console.log("Using item immediately");
             callback();
             return Promise.resolve();
         }
-        console.log("Setting npc busy");
-        return npc.setBusyFor(gameMinutesToUse, description).then(callback);
+        return npc.setBusyFor(gameMinutesToUse, this.actionDescription).then(callback);
     }
 
     /**
@@ -176,7 +186,7 @@ class Lunchbox extends Item {
 
     static create() {
         return new Lunchbox()
-            .addInterface(new Usable(/*numUses=*/5, /*minutesPerUse=*/3))
+            .addInterface(new Usable(/*numUses=*/5, /*minutesPerUse=*/3, "Äter matlåda"))
             .finalize();
     }
 }

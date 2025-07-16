@@ -197,3 +197,20 @@ a {
 	font-style: italic;
 	text-align: center;
 }
+
+#inspectorPrimaryInfo {
+	display: flex;
+}
+
+#inspectorTitle {
+	font-weight: bold;
+	font-size: larger;
+}
+
+#inspectorDescription {
+	font-style: italic;
+}
+
+#inspectorSpriteContainer {
+	margin: 1em;
+}

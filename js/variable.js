@@ -17,6 +17,11 @@ class Variable {
     getValue() {
         throw new Error('Not implemented');
     }
+
+    /** @returns {string} The current value of the variable, formatted. */
+    toString() {
+        return this.getValue().toFixed(0);
+    }
 }
 
 
@@ -209,51 +214,61 @@ class DerivedVariable extends Variable {
     /**
      * @param {function(...number):number} combiner 
      * @param {Variable[]} variables 
+     * @param {string | null} title 
+     * @param {string | null} description 
      */
-    constructor(combiner, variables) {
-        super();
+    constructor(combiner, variables, title = null, description = null) {
+        super(title, description);
         this.combiner = combiner;
         this.variables = variables;
     }
 
     getValue() {
-        return this.combiner(...this.variables);
+        return this.combiner(...this.variables.map(v => v.getValue()));
     }
 
     /**
+     * @param {string | null} title 
+     * @param {string | null} description 
      * @param {...Variable} terms
      * @returns {DerivedVariable}
      */
-    static sumOf(...terms) {
+    static sumOf(title, description, ...terms) {
         if (terms.length === 0) {
             throw new Error('Expected at least one variable');
         }
         return new DerivedVariable(
             (...values) => values.reduce((a, b) => a + b),
             terms,
+            title,
+            description,
         );
     }
 
     /**
+     * @param {string | null} title 
+     * @param {string | null} description 
      * @param {...Variable} terms
      * @returns {DerivedVariable}
      */
-    static maxOf(...terms) {
+    static maxOf(title, description, ...terms) {
         if (terms.length === 0) {
             throw new Error('Expected at least one variable');
         }
-        return new DerivedVariable(Math.max, terms);
+        return new DerivedVariable(Math.max, terms, title, description);
     }
 
     /**
+     * @param {string | null} title 
+     * @param {string | null} description 
      * @param {...Variable} terms
      * @returns {DerivedVariable}
      */
-    static minOf(...terms) {
+    static minOf(title, description, ...terms) {
         if (terms.length === 0) {
             throw new Error('Expected at least one variable');
         }
-        return new DerivedVariable(Math.min, terms);
+        return new DerivedVariable(Math.min, terms, title, description);
     }
 }
 
