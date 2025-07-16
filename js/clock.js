@@ -4,7 +4,7 @@ const __CLOCK_NEVER = Symbol('never');
 class Clock extends GameObject {
     /** @returns {Clock | null} */
     static get instance() { return __clock_instance; }
-    static get realMillisecondsPerGameMinute() { return 3000; }
+    static get realMillisecondsPerGameMinute() { return 2000; }
     static get NEVER() { return __CLOCK_NEVER; }
 
     constructor() {
@@ -25,7 +25,7 @@ class Clock extends GameObject {
      * The current time, in minutes from the game start.
      * @returns {number}
      */
-    static get now() {
+    static now() {
         return __clock_instance.elapsedGameMinutes;
     }
 
@@ -34,21 +34,43 @@ class Clock extends GameObject {
      * @returns {number} The timestamp `minutes` into the future.
      */
     static after(minutes) {
-        return this.now + minutes;
+        return this.now() + minutes;
     }
 
     /**
      * Schedule a callback to be invoked at a certain time.
      * If the timestamp has already passed, the callback is immediately invoked.
-     * @param {function():void} callback 
+     * @param {function():any} callback 
      * @param {number} time 
      */
     static schedule(callback, time) {
-        if (time < this.now) {
+        if (time <= this.now()) {
             callback();
         } else if (time !== __CLOCK_NEVER) {
             this.instance.callbacks.push(callback, time);
         }
+    }
+
+    /**
+     * Create a promise that is resolved after the given number of game minutes.
+     * @param {number} minutes 
+     * @returns {Promise<void>}
+     */
+    static waitFor(minutes) {
+        return this.waitUntil(this.after(minutes));
+    }
+
+    /**
+     * Create a promise that is resolved at a certain time.
+     * If the timestamp has already passed, the promise is immediately resolved.
+     * @param {number} time
+     * @returns {Promise<void>}
+     */
+    static waitUntil(time) {
+        if (time === __CLOCK_NEVER) {
+            return Promise.reject(new Error("Promise would wait indefinitely"));
+        }
+        return new Promise(resolve => this.schedule(resolve, time));
     }
 
     update(delta) {

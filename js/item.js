@@ -9,8 +9,164 @@ class Item extends GameObject {
      * @param {string | null} description 
      */
     constructor(title = null, description = null) {
+        super(0, 0);
+        this._imageDirty = false;  // Not drawn.
         this.title = title ?? this.constructor.title;
         this.description = description ?? this.constructor.description;
+        /** @type {Map<typeof Interface, Interface>} */
+        this._interfaces = new Map();
+        this._finalized = false;
+    }
+
+    /**
+     * Adds an interface to the item. Only supported before finalization.
+     * @param {Interface} interface_
+     * @returns {this}
+     */
+    addInterface(interface_) {
+        if (this._finalized) {
+            throw new Error(`Trying to add interface ${interface_} to finalized item ${this}`);
+        }
+        if (this._interfaces.has(interface_.constructor)) {
+            throw new Error(`Interface ${interface_} already present on item ${this}`);
+        }
+        this._interfaces.set(interface_.constructor, interface_);
+        interface_.onAddedTo(this);
+        return this;
+    }
+
+    /**
+     * Finalizes the interfaces added to the item. After this, no more interfaces may be added.
+     * @returns {this}
+     */
+    finalize() {
+        if (this._finalized) {
+            throw new Error(`Item already finalized: ${this}`);
+        }
+        for (const interface_ of this._interfaces.values()) {
+            interface_.onFinalize();
+        }
+        this._finalized = true;
+        return this;
+    }
+
+    /**
+     * @param {typeof Interface} type
+     * @returns {Interface}
+     */
+    getInterface(type) {
+        if (!this._interfaces.has(type)) {
+            throw new Error(`Item ${this} has no ${type.name}`);
+        }
+        return this._interfaces.get(type);
+    }
+
+    get [Symbol.toStringTag]() {
+        return `${this.constructor.name} (${this.title})`;
+    }
+}
+
+class Interface {
+    /**
+     * Called when the interface is added to an item.
+     * Other interfaces on which this one depends may not
+     * yet have been added.
+     * @param {Item} item 
+     */
+    onAddedTo(item) {
+        this.item = item;
+    }
+
+    /**
+     * Called after all interfaces have been added to an item.
+     * Can be used to set up dependencies on other interfaces.
+     */
+    onFinalize() {}
+}
+
+/**
+ * Interface for NPCs using an object.
+ */
+class Usable extends Interface {
+    // Number of times the item can be used before it is deleted.
+    static get NUM_USES() { return 1; }
+    // The time it takes to use the item, in game minutes.
+    static get MINUTES_PER_USE() { return 1; }
+
+    constructor(numUses = null, minutesPerUse = null) {
+        super();
+        this.remainingUses = numUses ?? this.constructor.NUM_USES;
+        this.minutesPerUse = minutesPerUse ?? this.constructor.MINUTES_PER_USE;
+        this.isInUse = false;
+
+        if (this.remainingUses <= 0) {
+            throw new Error(`Number of uses must be positive, got: ${this.remainingUses}`);
+        }
+        if (this.minutesPerUse < 0) {
+            throw new Error(`Minutes per use must be non-negative, got: ${this.minutesPerUse}`);
+        }
+    }
+
+    /**
+     * Whether or not the given NPC can use the item right now.
+     * @param {NPC} npc
+     * @returns {boolean}
+     */
+    canUse(npc) {
+        return !this.isInUse && !npc.isBusy() && this.item.id !== null && this.remainingUses > 0;
+    }
+
+    /**
+     * How long it would take the NPC to use the item.
+     * @param {NPC} npc
+     * @returns {number}
+     */
+    gameMinutesToUse(npc) {
+        return this.minutesPerUse;
+    }
+
+    /**
+     * Decrements the remaining uses and calls the onUsed and onUsedUp methods as necessary.
+     * @param {NPC} npc
+     */
+    use(npc, description = null) {
+        if (!this.canUse(npc)) {
+            throw new Error(`Item ${this.item} cannot be used by ${npc}`);
+        }
+        const gameMinutesToUse = this.gameMinutesToUse(npc);
+        const callback = () => {
+            console.log("Usable callback invoked");
+            this.remainingUses--;
+            this.onUsed(npc);
+            if (this.remainingUses <= 0) {
+                this.onUsedUp(npc);
+            }
+        };
+        if (gameMinutesToUse <= 0) {
+            console.log("Using item immediately");
+            callback();
+            return Promise.resolve();
+        }
+        console.log("Setting npc busy");
+        return npc.setBusyFor(gameMinutesToUse, description).then(callback);
+    }
+
+    /**
+     * Called when the item is used. By default, flags the item as no longer in use.
+     * @param {NPC} npc
+     */
+    onUsed(npc) {
+        this.isInUse = false;
+        console.log(`${npc} used ${this.item}. ${this.remainingUses} left.`);
+    }
+
+    /**
+     * Called when there are no more remaining uses. By default, deletes the item.
+     * @param {NPC} npc
+     */
+    onUsedUp(npc) {
+        console.log(`${npc} used up ${this.item}`);
+        this.item.despawn();
     }
 }
 
@@ -18,31 +174,9 @@ class Lunchbox extends Item {
     static get title() { return "Matlåda"; }
     static get description() { return "En portion mat"; }
 
-    constructor() {
-        super();
-        this.temperature = new Temperature();
-        this.amountLeft = 100;
-    }
-
-    canEat() {
-        return this.amountLeft > 0 && this.temperature.getValue() > 40;
-    }
-
-    /**
-     * @param {NPC} npc
-     * @param {number | null} amount
-     */
-    eat(npc, amount = null) {
-        amount ??= this.amountLeft;
-        amount = Math.max(0, Math.min(this.amountLeft, amount));
-        if (!this.canEat() || amount === 0) return;
-
-        npc.hunger.addModifier(new LinearRampModifier(
-            /*startAmount=*/amount,
-            // Äter man en hel matlåda är man mätt i fem timmar.
-            /*durationMinutes=*/amount * 3,
-            /*description=*/"Åt av en matlåda",
-        ));
-        this.amountLeft -= amount;
+    static create() {
+        return new Lunchbox()
+            .addInterface(new Usable(/*numUses=*/5, /*minutesPerUse=*/3))
+            .finalize();
     }
 }

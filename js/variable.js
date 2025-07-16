@@ -25,7 +25,7 @@ class Modifier {
     static get RECOMPUTE_EACH_UPDATE() { return 1; }
     static get HIGHEST_RECOMPUTE_CADENCY() { return this.RECOMPUTE_EACH_UPDATE; }
 
-    constructor(description = null, zeroAfter = Clock.NEVER, recomputePolicy = Modifier.RECOMPUTE_ALWAYS) {
+    constructor(description = null, zeroAfter = Clock.NEVER, recomputePolicy = Modifier.RECOMPUTE_EACH_UPDATE) {
         this.description = description;
         this.recomputePolicy = recomputePolicy;
         this.zeroAfter = zeroAfter;
@@ -39,7 +39,7 @@ class Modifier {
     }
 
     canBeRemoved() {
-        return this.zeroAfter !== Clock.NEVER && Clock.now >= this.zeroAfter;
+        return this.zeroAfter !== Clock.NEVER && Clock.now() >= this.zeroAfter;
     }
 }
 
@@ -125,11 +125,11 @@ class CachedVariable extends SimpleVariable {
     getValue() {
         if (this._cachedValue === null
                 || (this._recomputePolicy === Modifier.RECOMPUTE_EACH_UPDATE
-                        && this._lastRecomputed !== Clock.now)
+                        && this._lastRecomputed !== Clock.now())
                 
         ) {
             this._cachedValue = super.getValue();
-            this._lastRecomputed = Clock.now;
+            this._lastRecomputed = Clock.now();
         }
         return this._cachedValue;
     }
@@ -196,7 +196,7 @@ class LinearRampModifier extends Modifier {
     }
 
     value() {
-        return this.startAmount * (this.zeroAfter - Clock.now) / this.durationMinutes;
+        return this.startAmount * (this.zeroAfter - Clock.now()) / this.durationMinutes;
     }
 }
 

@@ -37,6 +37,22 @@ class Konstroller extends Controller {
         this.npc = new NPC(this.gameArea.gridWidth / 2, this.gameArea.gridHeight / 2);
         this.setMessage('> _');
         this.startDrawLoop();
+        // TODO: Maybe remove (start paused)?
+        this.onPlay();
+        
+        const lunchbox = Lunchbox.create();
+        const tryEatLunchbox = () => {
+            console.log("Trying to eat lunch box");
+            if (lunchbox.id === null) {
+                console.log("Lunch box is null");
+                return;
+            }
+            lunchbox.getInterface(Usable).use(this.npc).then(() => {
+                console.log("Waiting two minutes");
+                Clock.waitFor(2).then(tryEatLunchbox);
+            });
+        };
+        tryEatLunchbox();
     }
 
     onAssetsLoadFailure(reason) {
