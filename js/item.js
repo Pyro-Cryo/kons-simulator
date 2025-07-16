@@ -158,6 +158,7 @@ class Usable extends Interface {
             callback();
             return Promise.resolve();
         }
+        this.isInUse = true;
         return npc.setBusyFor(gameMinutesToUse, this.actionDescription).then(callback);
     }
 
@@ -203,6 +204,7 @@ class Edible extends Usable {
      * @param {NPC} npc
      */
     onUsed(npc) {
+        super.onUsed(npc);
         const duration = this.hungerPointsPerUse / this.hungerPointBurnRate;
         npc.hunger.addModifier(new LinearRampModifier(
             /*startAmount=*/-this.hungerPointsPerUse,

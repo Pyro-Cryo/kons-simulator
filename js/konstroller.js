@@ -10,7 +10,8 @@ class Konstroller extends Controller {
             /*updateInterval=*/ null,
             /*gridWidth=*/ 32,
             /*gridHeight=*/ 48,
-            /*gridOrigin=*/ GameArea.GRID_ORIGIN_LOWER_LEFT
+            /*gridOrigin=*/ GameArea.GRID_ORIGIN_LOWER_LEFT,
+            /*fastForwardFactor=*/ 4,
         );
         this.elements = {
             time: document.getElementById('time'),
@@ -34,7 +35,7 @@ class Konstroller extends Controller {
     }
 
     onAssetsLoaded() {
-        new Clock();
+        new Clock(this.elements.time);
         this.npc = new NPC(this.gameArea.gridWidth / 2, this.gameArea.gridHeight / 2);
         this.setMessage('> _');
         this.startDrawLoop();

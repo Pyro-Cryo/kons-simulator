@@ -7,11 +7,13 @@ class Clock extends GameObject {
     static get realMillisecondsPerGameMinute() { return 2000; }
     static get NEVER() { return __CLOCK_NEVER; }
 
-    constructor() {
+    /** @param {HTMLElement|null} timeElement */
+    constructor(timeElement = null) {
         super(0, 0);
         this._imageDirty = false;  // Not drawn.
         this.elapsedRealMilliseconds = 0;
         this.elapsedGameMinutes = 0;
+        this.timeElement = timeElement;
         /** @type {Minheap<function():void>} */
         this.callbacks = new Minheap();
 
@@ -73,9 +75,23 @@ class Clock extends GameObject {
         return new Promise(resolve => this.schedule(resolve, time));
     }
 
+    /** @param {number} time */
+    static formatTime(time) {
+        const hours = Math.floor(time / 60);
+        const minutes = Math.floor(time % 60);
+        return `${hours < 10 ? '0' + hours : hours}:${minutes < 10 ? '0' + minutes : minutes}`;
+    }
+
     update(delta) {
         this.elapsedRealMilliseconds += delta;
         this.elapsedGameMinutes = this.elapsedRealMilliseconds / Clock.realMillisecondsPerGameMinute;
+
+        if (this.timeElement !== null) {
+            const timeString = Clock.formatTime(this.elapsedGameMinutes);
+            if (this.timeElement.innerText !== timeString) {
+                this.timeElement.innerText = timeString;
+            }
+        }
 
         while (!this.callbacks.isEmpty() && this.callbacks.peekWeight() <= this.elapsedGameMinutes) {
             this.callbacks.pop()();
