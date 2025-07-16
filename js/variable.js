@@ -195,7 +195,7 @@ class LinearRampModifier extends Modifier {
      * @param {string} description
      */
     constructor(startAmount, durationMinutes, description = null) {
-        super(description, zeroAfter = Clock.after(durationMinutes), Modifier.RECOMPUTE_EACH_UPDATE);
+        super(description, Clock.after(durationMinutes), Modifier.RECOMPUTE_EACH_UPDATE);
         this.startAmount = startAmount;
         this.durationMinutes = durationMinutes;
     }

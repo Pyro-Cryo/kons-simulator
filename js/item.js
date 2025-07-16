@@ -180,13 +180,50 @@ class Usable extends Interface {
     }
 }
 
+class Edible extends Usable {
+    static get ACTION_DESCRIPTION() { return "Äter"; }
+    // Hunger% som försvinner per minut för vanlig mat.
+    static get BURN_RATE_STANDARD() { return 1 / 3; }
+    // Hunger% som försvinner per minut för snacks och liknande.
+    static get BURN_RATE_FAST() { return 1; }
+
+    constructor(
+            hungerPointsPerUse,
+            numUses = null,
+            minutesPerUse = null, 
+            hungerPointBurnRate = Consumable.BURN_RATE_STANDARD,
+            actionDescription = null,
+    ) {
+        super(numUses, minutesPerUse, actionDescription);
+        this.hungerPointsPerUse = hungerPointsPerUse;
+        this.hungerPointBurnRate = hungerPointBurnRate;
+    }
+
+    /**
+     * @param {NPC} npc
+     */
+    onUsed(npc) {
+        const duration = this.hungerPointsPerUse / this.hungerPointBurnRate;
+        npc.hunger.addModifier(new LinearRampModifier(
+            /*startAmount=*/-this.hungerPointsPerUse,
+            /*durationMinutes=*/duration,
+            /*description=*/"Åt mat",
+        ));
+    }
+}
+
 class Lunchbox extends Item {
     static get title() { return "Matlåda"; }
     static get description() { return "En portion mat"; }
 
     static create() {
         return new Lunchbox()
-            .addInterface(new Usable(/*numUses=*/5, /*minutesPerUse=*/3, "Äter matlåda"))
+            .addInterface(new Edible(
+                /*hungerPointsPerUse=*/20,
+                /*numUses=*/5,
+                /*minutesPerUse=*/3,
+                Edible.BURN_RATE_STANDARD,
+                "Äter matlåda"))
             .finalize();
     }
 }

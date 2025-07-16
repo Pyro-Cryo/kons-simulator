@@ -49,7 +49,7 @@ class Konstroller extends Controller {
                 console.log("Lunch box is null");
                 return;
             }
-            lunchbox.getInterface(Usable).use(this.npc).then(() => {
+            lunchbox.getInterface(Edible).use(this.npc).then(() => {
                 console.log("Waiting two minutes");
                 Clock.waitFor(2).then(tryEatLunchbox);
             });
