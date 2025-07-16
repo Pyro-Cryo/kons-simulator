@@ -6,18 +6,16 @@ class Item extends GameObject {
     /** @returns {string | null} */
     static get description() { return null; }
 
-    /**
-     * @param {string | null} title 
-     * @param {string | null} description 
-     */
-    constructor(title = null, description = null) {
-        super(0, 0);
-        this._imageDirty = false;  // Not drawn.
-        this.title = title ?? this.constructor.title;
-        this.description = description ?? this.constructor.description;
+    constructor(x = 0, y = 0) {
+        super(x, y);
+        this.title = this.constructor.title;
+        this.description = this.constructor.description;
         /** @type {Map<typeof Interface, Interface>} */
         this._interfaces = new Map();
         this._finalized = false;
+        this.hidden = this.constructor.image === null;
+        /** @type {NPC|null} */
+        this.carriedBy = null;
     }
 
     /**
@@ -69,6 +67,23 @@ class Item extends GameObject {
      */
     maybeGetInterface(type) {
         return this._interfaces.get(type) ?? null;
+    }
+
+    update(delta) {
+        super.update(delta);
+        if (this.carriedBy !== null) {
+            const xOffset = 0.5 * (
+                (this.carriedBy.heldInLeftHand === this) - (this.carriedBy.heldInRightHand === this)
+            );
+            this.x = this.carriedBy.x + xOffset;
+            this.y = this.carriedBy.y - 0.5;
+        }
+    }
+
+    draw(gameArea) {
+        if (!this.hidden) {
+            super.draw(gameArea);
+        }
     }
 
     get [Symbol.toStringTag]() {
@@ -260,6 +275,9 @@ class Container extends Interface {
         if (!this.canEmplace(item)) {
             throw new Error(`Cannot place item ${item} in container ${this}`);
         }
+        if (item.carriedBy !== null) {
+            item.carriedBy.putDown(item);
+        }
         const containable = item.getInterface(Containable);
         this.load += containable.size;
         containable.containedBy = this;
@@ -310,16 +328,28 @@ class Containable extends Interface {
          * This is set iff the item can be found in containedBy._items.
          * @type {Container|null}
         */
-        this.containedBy = containedBy;
+        this._containedBy = containedBy;
+    }
+
+    set containedBy(value) {
+        this._containedBy = value;
+        this.item.hidden = this._containedBy !== null;
+    }
+
+    get containedBy() {
+        return this._containedBy;
     }
 }
 
+const lunchboxImg = Resource.addAsset('img/matlada.png');
 class Lunchbox extends Item {
+    static get image() { return Resource.getAsset(lunchboxImg); }
+    static get scale() { return 0.2; }
     static get title() { return "Matlåda"; }
     static get description() { return "En portion mat"; }
 
-    static create() {
-        return new Lunchbox()
+    static create(x, y) {
+        return new Lunchbox(x, y)
             .addInterface(new Edible(
                 /*hungerPointsPerUse=*/20,
                 /*numUses=*/5,
@@ -331,12 +361,15 @@ class Lunchbox extends Item {
     }
 }
 
+const microwaveImg = Resource.addAsset('img/mikro.png');
 class Microwave extends Item {
+    static get image() { return Resource.getAsset(microwaveImg); }
+    static get scale() { return 0.2; }
     static get title() { return "Mikrovågsugn"; }
     static get description() { return "Värmer mat"; }
 
-    static create() {
-        return new Microwave()
+    static create(x, y) {
+        return new Microwave(x, y)
             .addInterface(new Container(
                 /*capacity=*/Containable.SIZE_MEDIUM,
             ))

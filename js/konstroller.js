@@ -43,20 +43,26 @@ class Konstroller extends Controller {
         
         this.npc = new NPC(this.gameArea.gridWidth / 2, this.gameArea.gridHeight / 2);
         this.inspector.open(this.npc);
+        this.testScript();
+    }
 
-        const microwave = Microwave.create();
-        const lunchbox = Lunchbox.create();
+    async testScript() {
+        const microwave = Microwave.create(10, 30);
+        const lunchbox = Lunchbox.create(20, 28);
+        await this.npc.walkTowards(lunchbox);
+        this.npc.pickUp(lunchbox);
+        await this.npc.walkTowards(microwave);
         microwave.getInterface(Container).emplace(lunchbox);
-        microwave.getInterface(Container).remove(lunchbox);
+        await this.npc.setBusyFor(2, "Värmer mat i mikro");
+        this.npc.pickUp(lunchbox);
+        await this.npc.walkTowardsCoordinates(this.gameArea.gridWidth / 2, this.gameArea.gridHeight / 2);
 
         const tryEatLunchbox = () => {
-            console.log("Trying to eat lunch box");
             if (lunchbox.id === null) {
-                console.log("Lunch box is null");
+                console.log("Ate lunch box");
                 return;
             }
             lunchbox.getInterface(Edible).use(this.npc).then(() => {
-                console.log("Waiting two minutes");
                 Clock.waitFor(2).then(tryEatLunchbox);
             });
         };
