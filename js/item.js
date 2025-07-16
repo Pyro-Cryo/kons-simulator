@@ -1,3 +1,5 @@
+"use strict";
+
 class Item extends GameObject {
     /** @returns {string | null} */
     static get title() { return null; }
@@ -147,8 +149,8 @@ class Usable extends Interface {
         }
         const gameMinutesToUse = this.gameMinutesToUse(npc);
         const callback = () => {
-            console.log("Usable callback invoked");
             this.remainingUses--;
+            this.isInUse = false;
             this.onUsed(npc);
             if (this.remainingUses <= 0) {
                 this.onUsedUp(npc);
@@ -163,20 +165,16 @@ class Usable extends Interface {
     }
 
     /**
-     * Called when the item is used. By default, flags the item as no longer in use.
+     * Called when the item is used.
      * @param {NPC} npc
      */
-    onUsed(npc) {
-        this.isInUse = false;
-        console.log(`${npc} used ${this.item}. ${this.remainingUses} left.`);
-    }
+    onUsed(npc) {}
 
     /**
      * Called when there are no more remaining uses. By default, deletes the item.
      * @param {NPC} npc
      */
     onUsedUp(npc) {
-        console.log(`${npc} used up ${this.item}`);
         this.item.despawn();
     }
 }
@@ -214,6 +212,108 @@ class Edible extends Usable {
     }
 }
 
+/**
+ * NPCs can place items in or remove them from this item.
+ */
+class Container extends Interface {
+    /**
+     * @param {number} capacity
+     * @param {function(Container,Item,NPC|null):any} onItemAdded
+     * @param {function(Container,Item,NPC|null):any} onItemRemoved
+     * @param {function(Container,Item):boolean} emplacementFilter 
+     */
+    constructor(
+            capacity = Infinity,
+            onItemAdded = () => null,
+            onItemRemoved = () => null,
+            emplacementFilter = () => true,
+    ) {
+        super();
+        this.capacity = capacity;
+        this.load = 0;
+        this.onItemAdded = onItemAdded;
+        this.onItemRemoved = onItemRemoved;
+        this.emplacementFilter = emplacementFilter;
+        /** @type {Containable[]} */
+        this._containables = [];
+    }
+
+    /** @param {Item} item */
+    contains(item) {
+        return item.maybeGetInterface(Containable)?.containedBy ?? null === this;
+    }
+
+    /** @param {Item} item */
+    canEmplace(item) {
+        const containable = item.maybeGetInterface(Containable);
+        return containable !== null
+            && this.load + containable.size <= this.capacity
+            && containable.containedBy === null
+            && this.emplacementFilter(this, item);
+    }
+
+    /**
+     * @param {Item} item
+     * @param {NPC|null} npc
+     * */
+    emplace(item, npc = null) {
+        if (!this.canEmplace(item)) {
+            throw new Error(`Cannot place item ${item} in container ${this}`);
+        }
+        const containable = item.getInterface(Containable);
+        this.load += containable.size;
+        containable.containedBy = this;
+        this._containables.push(containable);
+        this.onItemAdded(this, item, npc);
+    }
+
+    /**
+     * @param {Item} item
+     * @param {NPC|null} npc
+     * */
+    remove(item, npc = null) {
+        const containable = item.getInterface(Containable);
+        const index = this._containables.findIndex(c => c === containable);
+        if (index === -1) {
+            throw new Error(`Item ${item} is not in container ${this}`);
+        }
+        this.load -= containable.size;
+        containable.containedBy = null;
+        this._containables.splice(index, 1);
+        this.onItemRemoved(this, item, npc);
+    }
+
+    getItems() {
+        return Array.from(this._items);
+    }
+}
+
+class Containable extends Interface {
+    // A small item fits in a pocket.
+    static get SIZE_SMALL() { return 1; }
+    // A medium item can be carried in one hand.
+    static get SIZE_MEDIUM() { return 5; }
+    // A large item can be carried with two hands.
+    static get SIZE_LARGE() { return 25; }
+
+    /**
+     * @param {number} size 
+     * @param {Container|null} containedBy 
+     */
+    constructor(size = Containable.POCKET_SIZE, containedBy = null) {
+        super();
+        this.size = size;
+        if (this.size <= 0) {
+            throw new Error(`Size must be positive, got: ${this.size}`);
+        }
+        /**
+         * This is set iff the item can be found in containedBy._items.
+         * @type {Container|null}
+        */
+        this.containedBy = containedBy;
+    }
+}
+
 class Lunchbox extends Item {
     static get title() { return "Matlåda"; }
     static get description() { return "En portion mat"; }
@@ -226,6 +326,23 @@ class Lunchbox extends Item {
                 /*minutesPerUse=*/3,
                 Edible.BURN_RATE_STANDARD,
                 "Äter matlåda"))
+            .addInterface(new Containable(/*size=*/Containable.SIZE_MEDIUM))
+            .finalize();
+    }
+}
+
+class Microwave extends Item {
+    static get title() { return "Mikrovågsugn"; }
+    static get description() { return "Värmer mat"; }
+
+    static create() {
+        return new Microwave()
+            .addInterface(new Container(
+                /*capacity=*/Containable.SIZE_MEDIUM,
+            ))
+            .addInterface(new Containable(
+                /*size=*/Containable.SIZE_LARGE,
+            ))
             .finalize();
     }
 }

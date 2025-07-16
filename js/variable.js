@@ -1,3 +1,5 @@
+"use strict";
+
 class Variable {
     /** @returns {string | null} */
     static get title() { return null; }

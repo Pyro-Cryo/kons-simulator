@@ -1,3 +1,5 @@
+"use strict";
+
 class Hunger extends CachedVariable {
     static get title() { return "Hunger"; }
     static get description() { return "Personens behov att äta"; }

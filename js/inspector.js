@@ -1,3 +1,5 @@
+"use strict";
+
 class Inspector extends GameObject {
     constructor() {
         super(0, 0);

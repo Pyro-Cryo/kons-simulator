@@ -1,3 +1,5 @@
+"use strict";
+
 let __clock_instance = null;
 const __CLOCK_NEVER = Symbol('never');
 

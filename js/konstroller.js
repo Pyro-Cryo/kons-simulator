@@ -36,14 +36,19 @@ class Konstroller extends Controller {
 
     onAssetsLoaded() {
         new Clock(this.elements.time);
-        this.npc = new NPC(this.gameArea.gridWidth / 2, this.gameArea.gridHeight / 2);
         this.setMessage('> _');
         this.startDrawLoop();
         // TODO: Maybe remove (start paused)?
         this.onPlay();
         
+        this.npc = new NPC(this.gameArea.gridWidth / 2, this.gameArea.gridHeight / 2);
         this.inspector.open(this.npc);
+
+        const microwave = Microwave.create();
         const lunchbox = Lunchbox.create();
+        microwave.getInterface(Container).emplace(lunchbox);
+        microwave.getInterface(Container).remove(lunchbox);
+
         const tryEatLunchbox = () => {
             console.log("Trying to eat lunch box");
             if (lunchbox.id === null) {

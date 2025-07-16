@@ -1,3 +1,5 @@
+"use strict";
+
 class BusyMetadata {
     /**
      * @param {string|null} actionDescription 
