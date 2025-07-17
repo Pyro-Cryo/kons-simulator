@@ -235,4 +235,15 @@ class Minheap {
             i = parentIndex;
         }
     }
+
+    /**
+     * The smallest element is yielded first but the remaining
+     * elements are not in any particular order.
+     * @yields {T}
+     */
+     *[Symbol.iterator]() {
+        for (const element of this.elements) {
+            yield element.obj;
+        }
+    }
 }

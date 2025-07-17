@@ -86,7 +86,7 @@ class Item extends GameObject {
         }
     }
 
-    get [Symbol.toStringTag]() {
+    toString() {
         return `${this.constructor.name} (${this.title})`;
     }
 }
@@ -219,11 +219,11 @@ class Edible extends Usable {
     onUsed(npc) {
         super.onUsed(npc);
         const duration = this.hungerPointsPerUse / this.hungerPointBurnRate;
-        npc.hunger.addModifier(new LinearRampModifier(
-            /*startAmount=*/-this.hungerPointsPerUse,
-            /*durationMinutes=*/duration,
-            /*description=*/"Åt mat",
-        ));
+        npc.hunger.addFuel(
+            -this.hungerPointsPerUse,
+            duration,
+            "Åt mat",
+        );
     }
 }
 

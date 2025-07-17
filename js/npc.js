@@ -48,19 +48,21 @@ class NPC extends GameObject {
         this._walkingHandles = null;
 
         this.hunger = new Hunger();
-        this.moodModifiers = new CachedVariable(
-            /*title=*/null,
-            /*baseValue=*/0,
-            /*description=*/null,
-            /*min=*/-Infinity,
-            /*max=*/Infinity,
-            /*unit=*/null,
-        );
-        this.mood = new DerivedVariable(
-            (hunger, modifiers) => Math.max(Math.min(hunger + modifiers, 100), 0), 
-            [this.hunger, this.moodModifiers],
+        this.mood = new Variable(
             "Humör",
             "Hur lycklig personen är",
+            /*baseValue=*/100,
+        );
+        this.mood.addModifier(
+            MonitoringModifier.linearMapOnto(
+                this.hunger,
+                20,
+                -20,
+                "Mätt",
+                "Hyfsat mätt",
+                "Småhungrig",
+                "Hungrig"
+            )
         );
     }
 

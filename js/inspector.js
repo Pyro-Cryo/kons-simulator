@@ -17,7 +17,7 @@ class Inspector extends GameObject {
 
         /** @type {Item|NPC|null} */
         this.currentlyInspecting = null;
-        /** @type {{variable: Variable, element: HTMLDivElement}[]} */
+        /** @type {{variable: BaseVariable, element: HTMLDivElement}[]} */
         this._monitoredVariables = [];
     }
 
@@ -66,7 +66,7 @@ class Inspector extends GameObject {
             this.variables.appendChild(variableRoot);
             variableRoot.getElementsByClassName("title").item(0).innerText = variable.title;
             const valueElement = variableRoot.getElementsByClassName("value").item(0);
-            valueElement.innerText = variable.toString();
+            valueElement.innerText = variable.getFormattedValue();
             variableRoot.classList.remove("hidden", "template");
             this._monitoredVariables.push({variable: variable, element: valueElement});
         }
@@ -88,7 +88,7 @@ class Inspector extends GameObject {
         }
 
         for (const monitoredVariable of this._monitoredVariables) {
-            const stringValue = monitoredVariable.variable.toString();
+            const stringValue = monitoredVariable.variable.getFormattedValue();
             if (stringValue != monitoredVariable.element.innerText) {
                 monitoredVariable.element.innerText = stringValue;
             }
@@ -127,5 +127,9 @@ class Inspector extends GameObject {
     close() {
         this.root.classList.add("hidden");
         this.currentlyInspecting = null;
+        this._monitoredVariables = [];
+        while (this.variables.lastElementChild !== this.variableTemplate) {
+            this.variables.removeChild(this.variables.lastElementChild);
+        }
     }
 }
