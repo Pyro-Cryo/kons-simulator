@@ -69,10 +69,28 @@ class Inspector extends GameObject {
         }
     }
 
+    /** @param {HTMLImageElement|null} image */
+    setSprite(image) {
+        if (image !== null) {
+            this.sprite.width = image.width;
+            this.sprite.height = image.height;
+            const ctx = this.sprite.getContext("bitmaprenderer");
+            window.createImageBitmap(image).then(bitmap => {
+                ctx.transferFromImageBitmap(bitmap);
+                if (this.spriteContainer.classList.contains("hidden")) {
+                    this.spriteContainer.classList.remove("hidden");
+                }
+            });
+        } else if (!this.spriteContainer.classList.contains("hidden")) {
+            this.spriteContainer.classList.add("hidden");
+        }
+    }
+
     /** @param {Item} item */
     updateStaticItemInfo(item) {
         this.title.innerText = item.title;
         this.description.innerText = item.description;
+        this.setSprite(item.image);
 
         const variables = [
             item.maybeGetInterface(Heatable)?.temperature,
@@ -90,21 +108,9 @@ class Inspector extends GameObject {
         this.title.innerText = "Fysiker Matematikersson";
         this.description.innerText = "Helt vanlig student";
         this.currentAction.classList.remove("hidden");
-
         // TODO: This should maybe be dynamically updated instead.
-        if (npc.image !== null) {
-            this.sprite.width = npc.image.width;
-            this.sprite.height = npc.image.height;
-            const ctx = this.sprite.getContext("bitmaprenderer");
-            window.createImageBitmap(npc.image).then(bitmap => {
-                ctx.transferFromImageBitmap(bitmap);
-                if (this.spriteContainer.classList.contains("hidden")) {
-                    this.spriteContainer.classList.remove("hidden");
-                }
-            });
-        } else if (!this.spriteContainer.classList.contains("hidden")) {
-            this.spriteContainer.classList.add("hidden");
-        }
+        this.setSprite(npc.image);
+
         this._monitorVariables([npc.mood, npc.hunger]);
     }
 
