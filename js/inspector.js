@@ -25,12 +25,59 @@ class Inspector extends GameObject {
         return this.currentlyInspecting !== null;
     }
 
+    /** @param {BaseVariable} variable */
+    static _summarizeModifiers(variable) {
+        /** @type {Map<string, {count: number, sum: number}>} */
+        const summarizedModifiers = new Map();
+        for (const modifier of variable.iterateModifiers()) {
+            const description = modifier.description;
+            if (description === null) continue;
+            const summary = summarizedModifiers.get(description);
+            if (summary === undefined) {
+                summarizedModifiers.set(description, {count: 1, sum: modifier.value()});
+            } else {
+                summary.count += 1;
+                summary.sum += modifier.value();
+            }
+        }
+
+        return Array.from(
+            summarizedModifiers.entries(),
+            // Formats like "Ate cold food (-4)" or "Ate food x3 (+15)".
+            entry => `${entry[0]} ${entry[1].count > 1 ? `x${entry[1].count} ` : ''}(${entry[1].sum > 0 ? '+' : ''}${variable.formatValue(entry[1].sum)})`,
+        );
+    }
+
+    /** @param {BaseVariable[]} variables */
+    _monitorVariables(variables) {
+        this._monitoredVariables = [];
+        for (const variable of variables) {
+            /** @type {HTMLDivElement} */
+            const variableRoot = this.variableTemplate.cloneNode(true);
+            this.variables.appendChild(variableRoot);
+
+            variableRoot.getElementsByClassName("title").item(0).innerText = variable.title;
+            const valueElement = variableRoot.getElementsByClassName("value").item(0);
+            valueElement.innerText = variable.getFormattedValue();
+            variableRoot.classList.remove("hidden", "template");
+            variableRoot.onclick = e => {
+                console.log(this.constructor._summarizeModifiers(variable).join('\n'));
+                e.preventDefault();
+            };
+
+            this._monitoredVariables.push({variable: variable, element: valueElement});
+        }
+    }
+
     /** @param {Item} item */
     updateStaticItemInfo(item) {
         this.title.innerText = item.title;
         this.description.innerText = item.description;
-        this.currentAction.classList.add("hidden");
-        this._monitoredVariables = [];
+
+        const variables = [
+            item.maybeGetInterface(Heatable)?.temperature,
+        ].filter(v => !!v);
+        this._monitorVariables(variables);
     }
 
     /** @param {Item} item */
@@ -58,18 +105,7 @@ class Inspector extends GameObject {
         } else if (!this.spriteContainer.classList.contains("hidden")) {
             this.spriteContainer.classList.add("hidden");
         }
-
-        this._monitoredVariables = [];
-        for (const variable of [npc.hunger, npc.mood]) {
-            /** @type {HTMLDivElement} */
-            const variableRoot = this.variableTemplate.cloneNode(true);
-            this.variables.appendChild(variableRoot);
-            variableRoot.getElementsByClassName("title").item(0).innerText = variable.title;
-            const valueElement = variableRoot.getElementsByClassName("value").item(0);
-            valueElement.innerText = variable.getFormattedValue();
-            variableRoot.classList.remove("hidden", "template");
-            this._monitoredVariables.push({variable: variable, element: valueElement});
-        }
+        this._monitorVariables([npc.mood, npc.hunger]);
     }
 
     /** @param {NPC} npc */
@@ -85,13 +121,6 @@ class Inspector extends GameObject {
             }
         } else if (this.currentAction.innerText) {
             this.currentAction.innerText = "";
-        }
-
-        for (const monitoredVariable of this._monitoredVariables) {
-            const stringValue = monitoredVariable.variable.getFormattedValue();
-            if (stringValue != monitoredVariable.element.innerText) {
-                monitoredVariable.element.innerText = stringValue;
-            }
         }
     }
 
@@ -122,10 +151,19 @@ class Inspector extends GameObject {
         } else {
             this.updateDynamicNpcInfo(this.currentlyInspecting);
         }
+
+        for (const monitoredVariable of this._monitoredVariables) {
+            const stringValue = monitoredVariable.variable.getFormattedValue();
+            if (stringValue != monitoredVariable.element.innerText) {
+                monitoredVariable.element.innerText = stringValue;
+            }
+        }
     }
 
     close() {
         this.root.classList.add("hidden");
+        this.spriteContainer.classList.add("hidden");
+        this.currentAction.classList.add("hidden");
         this.currentlyInspecting = null;
         this._monitoredVariables = [];
         while (this.variables.lastElementChild !== this.variableTemplate) {

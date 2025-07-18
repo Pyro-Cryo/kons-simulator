@@ -49,6 +49,13 @@ class Konstroller extends Controller {
     async testScript() {
         const microwave = Microwave.create(10, 30);
         const lunchbox = Lunchbox.create(20, 28);
+        for (const thing of [this.npc, lunchbox, microwave]) {
+            const button = document.createElement('button');
+            button.innerText = thing.title ?? thing.constructor.name;
+            button.onclick = () => this.inspector.open(thing);
+            this.inspector.root.after(button);
+        }
+
         await this.npc.walkTowards(lunchbox);
         this.npc.pickUp(lunchbox);
         await this.npc.walkTowards(microwave);
@@ -62,7 +69,7 @@ class Konstroller extends Controller {
                 console.log("Ate lunch box");
                 return;
             }
-            lunchbox.getInterface(Edible).use(this.npc).then(() => {
+            lunchbox.getInterface(Usable).use(this.npc).then(() => {
                 Clock.waitFor(2).then(tryEatLunchbox);
             });
         };

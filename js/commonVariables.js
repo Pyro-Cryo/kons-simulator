@@ -57,6 +57,7 @@ class Temperature extends Variable {
      * @param {number} value
      * */
     setEnvironment(value) {
+        if (value === this.baseValue) return;
         const currentTemperature = this.getValue();
         this.baseValue = value;
         this.setCurrent(currentTemperature);

@@ -60,6 +60,7 @@ För att få lite variation har de också olika personlighetsdrag och humörsmä
 - Krukväxt, ökar trevnaden i en liten radie.
 - Gasquedekoration, ökar trevnaden under fest men minskar den i andra sammanhang.
 - Bokhylla, bonus till inluppar
+  - Man kanske kan köpa in kursböcker till år 1, 2 osv. allteftersom tiden går.
 - Brädspelshylla, bonus till umgänge, framförallt under pubar, men stör annars
 - Klädhängare + kläder
 - Flyttlådor, representerar "Bra att ha"-saker som funktionärer drar in. Kan ha en inventerings-lista med random prylar som nämnder använder men inte behöver få en egen sprite.

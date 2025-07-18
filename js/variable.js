@@ -311,6 +311,9 @@ class BaseVariable {
     toString() {
         return `${this.constructor.name}(title='${this.title}', min=${this.min}, max=${this.max})`;
     }
+
+    /** @yields {Modifier} */
+    *iterateModifiers() {}
 }
 
 /** A variable that accepts modifiers to its base value. */
@@ -361,6 +364,11 @@ class Variable extends BaseVariable {
     clearModifiers() {
         this._modifiers.clear();
         this._lastRecomputed = Clock.NEVER;
+    }
+
+    /** @yields {Modifier} */
+    *iterateModifiers() {
+        yield *this._modifiers;
     }
 }
 
@@ -422,5 +430,10 @@ class FurnaceVariable extends BaseVariable {
         }
 
         return value;
+    }
+
+    /** @yields {Modifier} */
+    *iterateModifiers() {
+        yield *this._modifiers;
     }
 }

@@ -6,16 +6,45 @@ class Item extends GameObject {
     /** @returns {string | null} */
     static get description() { return null; }
 
+    /**
+     * Sent after all interfaces have been added to an item.
+     * Can be used to set up dependencies on other interfaces.
+     */
+    static FINALIZE = 'Item:FINALIZE';
+    /** Sent each update with the delta, measured in game minutes. */
+    static UPDATE = 'Item:UPDATE';
+
     constructor(x = 0, y = 0) {
         super(x, y);
         this.title = this.constructor.title;
         this.description = this.constructor.description;
         /** @type {Map<typeof Interface, Interface>} */
         this._interfaces = new Map();
+        this._observer = new SignalObserver();
         this._finalized = false;
+        this.on(Item.FINALIZE, this.onFinalize.bind(this).bind(this));
+
         this.hidden = this.constructor.image === null;
         /** @type {NPC|null} */
         this.carriedBy = null;
+    }
+
+    /**
+     * Registers a callback to be invoked when `signalName` is sent.
+     * @param {string} signalName 
+     * @param {function(any):any} callback 
+     */
+    on(signalName, callback) {
+        this._observer.register(signalName, callback);
+    }
+
+    /**
+     * Sends the given signal with the provided data.
+     * @param {string} name 
+     * @param {any} data 
+     */
+    send(name, data = null) {
+        this._observer.send(name, data);
     }
 
     /**
@@ -31,7 +60,8 @@ class Item extends GameObject {
             throw new Error(`Interface ${interface_} already present on item ${this}`);
         }
         this._interfaces.set(interface_.constructor, interface_);
-        interface_.onAddedTo(this);
+        interface_.item = this;
+        this.on(Item.FINALIZE, interface_.onFinalize.bind(interface_));
         return this;
     }
 
@@ -43,12 +73,12 @@ class Item extends GameObject {
         if (this._finalized) {
             throw new Error(`Item already finalized: ${this}`);
         }
-        for (const interface_ of this._interfaces.values()) {
-            interface_.onFinalize();
-        }
+        this.send(Item.FINALIZE);
         this._finalized = true;
         return this;
     }
+
+    onFinalize() {}
 
     /**
      * @param {typeof Interface} type
@@ -73,11 +103,12 @@ class Item extends GameObject {
         super.update(delta);
         if (this.carriedBy !== null) {
             const xOffset = 0.5 * (
-                (this.carriedBy.heldInLeftHand === this) - (this.carriedBy.heldInRightHand === this)
+                (this.carriedBy.heldInRightHand === this) - (this.carriedBy.heldInLeftHand === this)
             );
             this.x = this.carriedBy.x + xOffset;
             this.y = this.carriedBy.y - 0.5;
         }
+        this.send(Item.UPDATE, delta / Clock.realMillisecondsPerGameMinute);
     }
 
     draw(gameArea) {
@@ -91,15 +122,20 @@ class Item extends GameObject {
     }
 }
 
+/**
+ * An aspect of an item. Interfaces should not inherit from one another as
+ * this messes with the signaling.
+ */
 class Interface {
     /**
-     * Called when the interface is added to an item.
-     * Other interfaces on which this one depends may not
-     * yet have been added.
-     * @param {Item} item 
-     */
-    onAddedTo(item) {
-        this.item = item;
+     * The item to which this interface belongs.
+     * Populated when the interface is added to an item.
+     *  @type {Item} */
+    item;
+
+    /** Creates a new signal name prefixed with the class name. */
+    static signal(name) {
+        return `${this.name}:${name}`;
     }
 
     /**
@@ -114,18 +150,25 @@ class Interface {
  */
 class Usable extends Interface {
     // Number of times the item can be used before it is deleted.
-    static get NUM_USES() { return 1; }
+    static get numUses() { return 1; }
     // The time it takes to use the item, in game minutes.
-    static get MINUTES_PER_USE() { return 1; }
+    static get minutesPerUse() { return 1; }
     // A description displayed on the NPC when the item is in use.
     // Should be on the form "Eating lunchbox" or "Washing dishes".
-    static get ACTION_DESCRIPTION() { return null; }
+    static get actionDescription() { return null; }
 
-    constructor(numUses = null, minutesPerUse = null, actionDescription = null) {
+    /** Sent when the item is used, with the npc that used it. */
+    static USED = this.signal('USED');
+    /** Sent when the item has no more uses, with the npc that used it last. */
+    static USED_UP = this.signal('USED_UP');
+
+    /** @typedef {{numUses?: number, minutesPerUse?: number, actionDescription?: string}} UsableConfig */
+    /** @param {UsableConfig} config */
+    constructor(config) {
         super();
-        this.remainingUses = numUses ?? this.constructor.NUM_USES;
-        this.minutesPerUse = minutesPerUse ?? this.constructor.MINUTES_PER_USE;
-        this.actionDescription = actionDescription ?? this.constructor.ACTION_DESCRIPTION;
+        this.remainingUses = config.numUses ?? this.constructor.numUses;
+        this.minutesPerUse = config.minutesPerUse ?? this.constructor.minutesPerUse;
+        this.actionDescription = config.actionDescription ?? this.constructor.actionDescription;
         this.isInUse = false;
 
         if (this.remainingUses <= 0) {
@@ -134,6 +177,11 @@ class Usable extends Interface {
         if (this.minutesPerUse < 0) {
             throw new Error(`Minutes per use must be non-negative, got: ${this.minutesPerUse}`);
         }
+    }
+
+    onFinalize() {
+        this.item.on(Usable.USED, this.onUsed.bind(this));
+        this.item.on(Usable.USED_UP, this.onUsedUp.bind(this));
     }
 
     /**
@@ -166,9 +214,10 @@ class Usable extends Interface {
         const callback = () => {
             this.remainingUses--;
             this.isInUse = false;
-            this.onUsed(npc);
+            this.item.send(Usable.USED, npc);
+
             if (this.remainingUses <= 0) {
-                this.onUsedUp(npc);
+                this.item.send(Usable.USED_UP, npc);
             }
         };
         if (gameMinutesToUse <= 0) {
@@ -194,30 +243,35 @@ class Usable extends Interface {
     }
 }
 
-class Edible extends Usable {
-    static get ACTION_DESCRIPTION() { return "Äter"; }
+class Edible extends Interface {
     // Hunger% som försvinner per minut för vanlig mat.
     static get BURN_RATE_STANDARD() { return 1 / 3; }
     // Hunger% som försvinner per minut för snacks och liknande.
     static get BURN_RATE_FAST() { return 1; }
 
-    constructor(
-            hungerPointsPerUse,
-            numUses = null,
-            minutesPerUse = null, 
-            hungerPointBurnRate = Consumable.BURN_RATE_STANDARD,
-            actionDescription = null,
-    ) {
-        super(numUses, minutesPerUse, actionDescription);
-        this.hungerPointsPerUse = hungerPointsPerUse;
-        this.hungerPointBurnRate = hungerPointBurnRate;
+    static get actionDescription() { return "Äter"; }
+    static get hungerPointsPerUse() { return null; }
+    static get hungerPointBurnRate() { return Edible.BURN_RATE_STANDARD; }
+
+    /** @typedef {{hungerPointsPerUse?: number, hungerPointBurnRate?: number}} EdibleConfig */
+    /** @param {EdibleConfig} config */
+    constructor(config) {
+        super();
+        this.hungerPointsPerUse = config.hungerPointsPerUse ?? this.constructor.hungerPointsPerUse;
+        this.hungerPointBurnRate = config.hungerPointBurnRate ?? this.constructor.hungerPointBurnRate;
+        if (this.hungerPointsPerUse === null) {
+            throw new Error(`Hunger points per use must be specified: ${this}`);
+        }
+    }
+
+    onFinalize() {
+        this.item.on(Usable.USED, this.onUsed.bind(this));
     }
 
     /**
      * @param {NPC} npc
      */
     onUsed(npc) {
-        super.onUsed(npc);
         const duration = this.hungerPointsPerUse / this.hungerPointBurnRate;
         npc.hunger.addFuel(
             -this.hungerPointsPerUse,
@@ -231,23 +285,19 @@ class Edible extends Usable {
  * NPCs can place items in or remove them from this item.
  */
 class Container extends Interface {
+    /** Sent when an item was added, with data = {container: Container, containable: Containable, npc: NPC|null}. */
+    static ITEM_ADDED = this.signal('ITEM_ADDED');
+    /** Sent when an item was removed, with data = {container: Container, containable: Containable, npc: NPC|null}. */
+    static ITEM_REMOVED = this.signal('ITEM_REMOVED');
+
     /**
      * @param {number} capacity
-     * @param {function(Container,Item,NPC|null):any} onItemAdded
-     * @param {function(Container,Item,NPC|null):any} onItemRemoved
      * @param {function(Container,Item):boolean} emplacementFilter 
      */
-    constructor(
-            capacity = Infinity,
-            onItemAdded = () => null,
-            onItemRemoved = () => null,
-            emplacementFilter = () => true,
-    ) {
+    constructor(capacity = Infinity, emplacementFilter = () => true) {
         super();
         this.capacity = capacity;
         this.load = 0;
-        this.onItemAdded = onItemAdded;
-        this.onItemRemoved = onItemRemoved;
         this.emplacementFilter = emplacementFilter;
         /** @type {Containable[]} */
         this._containables = [];
@@ -282,7 +332,10 @@ class Container extends Interface {
         this.load += containable.size;
         containable.containedBy = this;
         this._containables.push(containable);
-        this.onItemAdded(this, item, npc);
+
+        const data = {container: this, containable: containable, npc: npc};
+        this.item.send(Container.ITEM_ADDED, data);
+        containable.item.send(Containable.INSERTED, data);
     }
 
     /**
@@ -298,7 +351,10 @@ class Container extends Interface {
         this.load -= containable.size;
         containable.containedBy = null;
         this._containables.splice(index, 1);
-        this.onItemRemoved(this, item, npc);
+
+        const data = {container: this, containable: containable, npc: npc};
+        this.item.send(Container.ITEM_REMOVED, data);
+        containable.item.send(Containable.OUTSERTED, data);
     }
 
     getItems() {
@@ -317,6 +373,11 @@ class Containable extends Interface {
     static get SIZE_MEDIUM() { return 5; }
     // A large item can be carried with two hands.
     static get SIZE_LARGE() { return 25; }
+
+    /** Sent when this item was added to a container, with data = {container: Container, containable: Containable, npc: NPC|null}. */
+    static INSERTED = this.signal('INSERTED');
+    /** Sent when this item was removed from a container, with data = {container: Container, containable: Containable, npc: NPC|null}. */
+    static OUTSERTED = this.signal('OUTSERTED');
 
     /**
      * @param {number} size 
@@ -345,6 +406,9 @@ class Containable extends Interface {
     }
 }
 
+// TODO: Ska man bara förenkla allt detta till att vara en skala
+// [Iskallt, Kyligt, Svalt, Ljummet (default), Varmt, Hett, Skållhett, Brinner]
+// och låta en mikro ticka saker åt höger en gång / minut och en frys åt vänster?
 class Heatable extends Interface {
     // Finns fler på https://www.engineeringtoolbox.com/specific-heat-capacity-d_391.html
     // och https://en.wikipedia.org/wiki/Table_of_specific_heat_capacities.
@@ -369,6 +433,31 @@ class Heatable extends Interface {
         super();
         this.heatCapacity = heatCapacity;
         this.temperature = new Temperature(halfLife ?? (heatCapacity / 200));
+        /** @type {Temperature|null} */
+        this._environment = null;
+    }
+
+    onFinalize() {
+        this.item.on(Containable.INSERTED, this.onInserted.bind(this));
+        this.item.on(Containable.OUTSERTED, this.onOutserted.bind(this));
+        this.item.on(Item.UPDATE, this.onUpdate.bind(this));
+    }
+
+    /** @param {{container: Container, containable: Containable, npc: NPC|null}} data */
+    onInserted(data) {
+        this._environment = data.container.item.maybeGetInterface(Heatable)?.temperature ?? null;
+    }
+
+    onOutserted() {
+        this._environment = null;
+        this.temperature.setEnvironment(Temperature.baseValue);
+    }
+
+    onUpdate() {
+        if (this._environment !== null) {
+            // TODO: Not necessary to do every frame.
+            this.temperature.setEnvironment(this._environment.getValue());
+        }
     }
 
     addEnergy(joules) {
@@ -386,28 +475,32 @@ class Lunchbox extends Item {
 
     static create(x, y) {
         return new Lunchbox(x, y)
-            .addInterface(new Edible(
-                /*hungerPointsPerUse=*/20,
-                /*numUses=*/5,
-                /*minutesPerUse=*/3,
-                Edible.BURN_RATE_STANDARD,
-                "Äter matlåda"))
+            .addInterface(new Usable({
+                numUses: 5,
+                minutesPerUse: 3,
+                actionDescription: "Äter matlåda",
+            }))
+            .addInterface(new Edible({
+                hungerPointsPerUse: 20
+            }))
             .addInterface(new Containable(/*size=*/Containable.SIZE_MEDIUM))
             .addInterface(new Heatable(Heatable.SPECIFIC_HEAT_WATER * 0.4))
             .finalize();
     }
 
-    finalize() {
-        super.finalize();
+    onFinalize() {
+        /** @type {Heatable} */
         this.heatable = this.getInterface(Heatable);
+        this.on(Usable.USED, this.onUsed.bind(this));
+    }
 
-        const callback = () => {
-            if (this.id === null) return;
-            console.log(`The temperature of the lunch box is ${this.heatable.temperature.getFormattedValue()}`);
-            Clock.schedule(callback, Clock.after(2));
-        };
-        callback();
-        return this;
+    /** @param {NPC} npc */
+    onUsed(npc) {
+        const temperature = this.heatable.temperature.getValue();
+        npc.mood.addModifier(new FixedModifier(2, /*duration=*/60, "Åt god mat"));
+        if (temperature < 40) {
+            npc.mood.addModifier(new FixedModifier(-3, /*duration=*/60, "Åt kall mat"));
+        }
     }
 }
 
@@ -434,11 +527,9 @@ class Microwave extends Item {
             .finalize();
     }
 
-    finalize() {
-        super.finalize();
+    onFinalize() {
         /** @type {Container} */
         this.container = this.getInterface(Container);
-        return this;
     }
 
     update(delta) {
