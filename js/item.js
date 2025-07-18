@@ -302,7 +302,11 @@ class Container extends Interface {
     }
 
     getItems() {
-        return Array.from(this._items);
+        return this._containables.map(c => c.item);
+    }
+
+    isEmpty() {
+        return !this._containables.length;
     }
 }
 
@@ -325,7 +329,7 @@ class Containable extends Interface {
             throw new Error(`Size must be positive, got: ${this.size}`);
         }
         /**
-         * This is set iff the item can be found in containedBy._items.
+         * This is set iff this can be found in containedBy._containables.
          * @type {Container|null}
         */
         this._containedBy = containedBy;
@@ -338,6 +342,38 @@ class Containable extends Interface {
 
     get containedBy() {
         return this._containedBy;
+    }
+}
+
+class Heatable extends Interface {
+    // Finns fler på https://www.engineeringtoolbox.com/specific-heat-capacity-d_391.html
+    // och https://en.wikipedia.org/wiki/Table_of_specific_heat_capacities.
+    // Material.
+    static get SPECIFIC_HEAT_WATER() { return 4184; }
+    static get SPECIFIC_HEAT_IRON() { return 449; }
+    static get SPECIFIC_HEAT_WOOD() { return 1700; }
+    static get SPECIFIC_HEAT_AIR() { return 1000; }
+    // Ätbart.
+    static get SPECIFIC_HEAT_ETHANOL() { return 2440; }
+    static get SPECIFIC_HEAT_MEAT() { return 3500; }
+    static get SPECIFIC_HEAT_POTATOES() { return 3430; }
+    static get SPECIFIC_HEAT_COOKING_OIL() { return 1790; }
+    static get SPECIFIC_HEAT_FAT() { return 900; }
+    static get SPECIFIC_HEAT_SALT() { return 880; }
+
+    /**
+     * @param {number} heatCapacity The energy in joules required to heat the object one degree. Defaults to that of 1 kg of water.
+     * @param {number|null} halfLife Game minutes until the temperature difference between the item and the environment is halved. Defaults to the heat capacity / 200.
+     */
+    constructor(heatCapacity = Heatable.SPECIFIC_HEAT_WATER, halfLife = null) {
+        super();
+        this.heatCapacity = heatCapacity;
+        this.temperature = new Temperature(halfLife ?? (heatCapacity / 200));
+    }
+
+    addEnergy(joules) {
+        if (joules === 0) return;
+        this.temperature.adjustCurrent(joules / this.heatCapacity);
     }
 }
 
@@ -357,7 +393,21 @@ class Lunchbox extends Item {
                 Edible.BURN_RATE_STANDARD,
                 "Äter matlåda"))
             .addInterface(new Containable(/*size=*/Containable.SIZE_MEDIUM))
+            .addInterface(new Heatable(Heatable.SPECIFIC_HEAT_WATER * 0.4))
             .finalize();
+    }
+
+    finalize() {
+        super.finalize();
+        this.heatable = this.getInterface(Heatable);
+
+        const callback = () => {
+            if (this.id === null) return;
+            console.log(`The temperature of the lunch box is ${this.heatable.temperature.getFormattedValue()}`);
+            Clock.schedule(callback, Clock.after(2));
+        };
+        callback();
+        return this;
     }
 }
 
@@ -368,6 +418,11 @@ class Microwave extends Item {
     static get title() { return "Mikrovågsugn"; }
     static get description() { return "Värmer mat"; }
 
+    constructor(x = 0, y = 0, wattage = 1000) {
+        super(x, y);
+        this.wattage = wattage;
+    }
+
     static create(x, y) {
         return new Microwave(x, y)
             .addInterface(new Container(
@@ -377,5 +432,23 @@ class Microwave extends Item {
                 /*size=*/Containable.SIZE_LARGE,
             ))
             .finalize();
+    }
+
+    finalize() {
+        super.finalize();
+        /** @type {Container} */
+        this.container = this.getInterface(Container);
+        return this;
+    }
+
+    update(delta) {
+        super.update(delta);
+        // TODO: Fixa nån slags signalering mellan interfaces.
+        if (!this.container.isEmpty()) {
+            const energy = this.wattage * delta * 60 / Clock.realMillisecondsPerGameMinute;
+            for (const item of this.container.getItems()) {
+                item.maybeGetInterface(Heatable)?.addEnergy(energy);
+            }
+        }
     }
 }

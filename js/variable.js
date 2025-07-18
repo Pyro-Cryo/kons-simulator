@@ -89,6 +89,30 @@ class FunctionalModifier extends Modifier {
     canBeRemoved() {
         return this.progress >= this.duration;
     }
+
+    /**
+     * @param {number} initialValue Initial value of the modifier.
+     * @param {number} halfLife Game minutes until the modifier has decayed to half the initial value.
+     * @param {number} insignificantValue Time after which the modifier is rounded to zero and can be removed.
+     * @param {string|null} description 
+     * @returns {FunctionalModifier}
+     */
+    static decaying(initialValue, halfLife, description = null, insignificantValue = null) {
+        if (halfLife <= 0) {
+            throw new Error(`Half life must be positive, got: ${halfLife}`);
+        }
+        if (insignificantValue === null) {
+            // By default, round to zero below 0.5.
+            insignificantValue = Math.sign(initialValue) * 0.5;
+        }
+        if (Math.sign(initialValue) !== Math.sign(insignificantValue)) {
+            throw new Error(`Modifier decaying from ${initialValue} will never reach ${insignificantValue}`);
+        }
+        const duration = initialValue === 0 ? 0 : Math.max(0, -halfLife * Math.log2(insignificantValue / initialValue));
+        return new FunctionalModifier(
+            t => initialValue * Math.pow(2, -t / halfLife), duration, description
+        );
+    }
 }
 
 /**
@@ -165,6 +189,8 @@ class MonitoringModifier extends Modifier {
             description = null;
         } else if (descriptions.length === 1) {
             description = descriptions[0];
+        } else if (max === min) {
+            throw new Error(`Min and max must differ when multiple descriptions are used.`)
         } else {
             const indexMultiplier = descriptions.length / (max - min);
             description = value => descriptions[Math.min(descriptions.length - 1, Math.floor(indexMultiplier * (value - min)))];
@@ -287,7 +313,7 @@ class BaseVariable {
     }
 }
 
-
+/** A variable that accepts modifiers to its base value. */
 class Variable extends BaseVariable {
     /** @returns {number} */
     static get baseValue() { return 0; }
@@ -329,6 +355,11 @@ class Variable extends BaseVariable {
      */
     removeModifier(modifier) {
         this._modifiers.remove(modifier);
+        this._lastRecomputed = Clock.NEVER;
+    }
+
+    clearModifiers() {
+        this._modifiers.clear();
         this._lastRecomputed = Clock.NEVER;
     }
 }
