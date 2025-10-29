@@ -122,3 +122,10 @@ För att få lite variation har de också olika personlighetsdrag och humörsmä
 - GK och vanlig student
 - Hunger och Studiero
 - Bord, stol, mikrovågsugn
+
+
+## Utvecklingsmiljö
+
+* Linter är eslint. Behöver installeras lokalt med t.ex. npm: `npm install eslint --save-dev`. Sedan kan den användas tillsammans med vs-code extension.
+* Prettier som formatter, finns t.ex. som vs-code extension.
+
