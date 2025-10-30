@@ -1,6 +1,8 @@
-'use strict';
+import {Variable} from './variable.js';
+import {FurnaceVariable} from './variable.js';
+import {FunctionalModifier} from './variable.js';
 
-class Hunger extends FurnaceVariable {
+export class Hunger extends FurnaceVariable {
   static get title() {
     return 'Hunger';
   }
@@ -21,7 +23,7 @@ class Hunger extends FurnaceVariable {
   }
 }
 
-class Temperature extends Variable {
+export class Temperature extends Variable {
   static get title() {
     return 'Temperatur';
   }

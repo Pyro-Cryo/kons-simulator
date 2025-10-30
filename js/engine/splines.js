@@ -1,5 +1,3 @@
-'use strict';
-
 let _Splines_pascalTriangle = [[1], [1, 1]];
 let _Splines_ENDPOINT_SAME = 0;
 let _Splines_ENDPOINT_EXTRAPOLATE = 1;
@@ -9,7 +7,7 @@ let _Splines_DERIVATIVE_FORWARD = 2;
 let _Splines_DERIVATIVE_OUT = 3;
 let _Splines_DERIVATIVE_ZERO = 4;
 
-class Splines {
+export class Splines {
   static get pascalTriangle() {
     return _Splines_pascalTriangle;
   }

@@ -1,21 +1,19 @@
-'use strict';
-
 let _Resource__loadedAssets = new Map();
 let _Resource__registeredAssets = new Map();
 let _Resource__assetsDirty = false;
 let _Resource__assetsCurrentlyLoading = false;
 
-class Resource {
+export class Resource {
   /**
    * Ger ett Promise som resolvas när alla de listade sakerna hämtats (eller
-	 * någon failar).
+   * någon failar).
    * @param {any[][]} resources En array med saker att hämta. Dessa är i sig
-	 * 		arrayer: [path, type, map, onErr]. De första tre motsvarar argumenten
-	 * 		till loadSingle(). onErr körs om inte objektet kan hämtas.
+   * 		arrayer: [path, type, map, onErr]. De första tre motsvarar argumenten
+   * 		till loadSingle(). onErr körs om inte objektet kan hämtas.
    * @param {*} defaultType Om en array i resources inte specificerar en typ
-	 * 		används denna.
+   * 		används denna.
    * @param {Function} onUpdate Körs varje gång ett objekt har hämtats (och
-	 * 		onload körts). Kan t.ex. användas för loading bars.
+   * 		onload körts). Kan t.ex. användas för loading bars.
    */
   static load(resources, defaultType = Image, onUpdate = null) {
     let progress = 0;
@@ -52,7 +50,7 @@ class Resource {
    * @param {string} path URI till objektet.
    * @param {*} type Vad för slags objekt det är som hämtas (ex. Image, Audio).
    * @param {Function} map Anropas med objektet när det hämtats. Om ett
-	 * 		returvärde ges skickas det vidare till det promise som returneras av
+   * 		returvärde ges skickas det vidare till det promise som returneras av
    *    `loadSingle()`.
    */
   static loadSingle(path, type = Image, map = null) {
@@ -162,12 +160,12 @@ class Resource {
 
   /**
    * Registrerar ett objekt som en asset. Dessa hämtas med loadAssets() och
-	 * cacheas så de kan kommas åt med getAsset().
+   * cacheas så de kan kommas åt med getAsset().
    * @param {string} path URI till objektet.
    * @param {*} type Vad för slags objekt det är som hämtas (ex. Image, Audio).
    * @param {Function} map Anropas med objektet när det hämtats. Om ett
-	 * 		returvärde ges skickas det vidare till det promise som returneras av
-	 * 		loadSingle().
+   * 		returvärde ges skickas det vidare till det promise som returneras av
+   * 		loadSingle().
    * @returns Den URI som angavs.
    */
   static addAsset(path, type = Image, map = null) {

@@ -1,4 +1,4 @@
-class SignalObserver {
+export class SignalObserver {
   constructor() {
     /** @type {Map<string, Array<function(any):any>} */
     this._callbacks = new Map();

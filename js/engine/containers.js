@@ -2,7 +2,7 @@
  * A doubly linked list used to store objects.
  * @template T
  */
-class LinkedList {
+export class LinkedList {
   constructor() {
     /** @type {{obj: T} | null} */
     this.first = null;
@@ -134,7 +134,7 @@ class LinkedList {
  * Objects with smaller weights are returned first.
  * @template T
  */
-class Minheap {
+export class Minheap {
   constructor() {
     /** @type {{obj: T, weight: number}[]} */
     this.elements = [];

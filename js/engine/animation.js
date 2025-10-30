@@ -1,6 +1,6 @@
-'use strict';
+import {Splines} from "./splines.js";
 
-class BasicAnimation {
+export class BasicAnimation {
   constructor(
     obj = null,
     interpolation = Splines.interpolateLinear.bind(Splines)

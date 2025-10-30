@@ -1,3 +1,3 @@
-class Furniture extends GameObject {
+import {GameObject} from './engine/gameObject.js';
 
-}
+export class Furniture extends GameObject {}

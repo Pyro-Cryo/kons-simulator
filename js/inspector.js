@@ -1,6 +1,10 @@
-'use strict';
+import {GameObject} from './engine/gameObject.js';
+import {Item} from './item.js';
+import {NPC} from './npc.js';
+import {BaseVariable} from './variable.js';
+import {Heatable} from './item.js';
 
-class Inspector extends GameObject {
+export class Inspector extends GameObject {
   constructor() {
     super(0, 0);
     this._imageDirty = false; // Not drawn.

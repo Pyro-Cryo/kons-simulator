@@ -1,6 +1,11 @@
-'use strict';
+import {Controller} from './engine/controller.js';
+import {GameArea} from './engine/gameArea.js';
+import {Inspector} from './inspector.js';
+import {Clock} from './clock.js';
+import {NPC} from './npc.js';
+import {Lunchbox, Microwave, Container, Usable} from './item.js';
 
-class Konstroller extends Controller {
+export class Konstroller extends Controller {
   static get STORAGE_PREFIX() {
     return 'konssimulator_';
   }

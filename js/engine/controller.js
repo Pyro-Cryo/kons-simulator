@@ -1,7 +1,9 @@
-'use strict';
+import {GameArea} from './gameArea.js';
+import {Resource} from './resource.js';
+import {LinkedList} from './containers.js';
 
 let _Controller__instances = [];
-class Controller {
+export class Controller {
   static get _instances() {
     return _Controller__instances;
   }
@@ -454,7 +456,8 @@ class Controller {
   }
 
   // Register an object to receive update calls.
-  // It should have an update method, a draw method accepting a GameArea, and allow for setting an id
+  // It should have an update method, a draw method accepting a GameArea, and
+  // allow for setting an id
   registerObject(object, layer = 0) {
     this.ensureLayerExists(layer);
     this.layers[layer].push(object);
@@ -462,8 +465,10 @@ class Controller {
   }
 
   /**
-   * Immediately changes the layer of an object. Prefer scheduleLayerChange() during update calls,
-   * or some objects may miss an update since the lists are modified while they are being iterated over.
+   * Immediately changes the layer of an object. Prefer scheduleLayerChange()
+   * during update calls,
+   * or some objects may miss an update since the lists are modified while they
+   * are being iterated over.
    * @param {GameObject} object
    * @param {number} source The layer that the object is currently in.
    * @param {number} destination The layer that the object should move to.
@@ -471,7 +476,8 @@ class Controller {
   changeLayer(object, source, destination) {
     if (source < 0 || source >= this.layers.length) {
       throw new Error(
-        `Invalid source layer: ${source} (number of layers is ${this.layers.length})`
+        `Invalid source layer: ${source} (number of layers is ` +
+          `${this.layers.length})`
       );
     }
     if (!this.layers[source].remove(object)) {

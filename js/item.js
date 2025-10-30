@@ -1,6 +1,11 @@
-'use strict';
+import {GameObject} from './engine/gameObject.js';
+import {Resource} from './engine/resource.js';
+import {SignalObserver} from './signaling.js';
+import {Temperature} from './commonVariables.js';
+import {Clock} from './clock.js';
+import {FixedModifier} from './variable.js';
 
-class Item extends GameObject {
+export class Item extends GameObject {
   /** @returns {string | null} */
   static get title() {
     return null;
@@ -135,7 +140,7 @@ class Item extends GameObject {
  * An aspect of an item. Interfaces should not inherit from one another as
  * this messes with the signaling.
  */
-class Interface {
+export class Interface {
   /**
    * The item to which this interface belongs.
    * Populated when the interface is added to an item.
@@ -157,7 +162,7 @@ class Interface {
 /**
  * Interface for NPCs using an object.
  */
-class Usable extends Interface {
+export class Usable extends Interface {
   // Number of times the item can be used before it is deleted.
   static get numUses() {
     return 1;
@@ -180,7 +185,7 @@ class Usable extends Interface {
   /**
    * @typedef {{numUses?: number,minutesPerUse?: number, actionDescription?: string}} UsableConfig
    * */
-  /** 
+  /**
    * @param {UsableConfig} config
    * */
   constructor(config) {
@@ -275,7 +280,7 @@ class Usable extends Interface {
   }
 }
 
-class Edible extends Interface {
+export class Edible extends Interface {
   // Hunger% som försvinner per minut för vanlig mat.
   static get BURN_RATE_STANDARD() {
     return 1 / 3;
@@ -324,7 +329,7 @@ class Edible extends Interface {
 /**
  * NPCs can place items in or remove them from this item.
  */
-class Container extends Interface {
+export class Container extends Interface {
   /**
    * Sent when an item was added, with data =
    *    {container: Container, containable: Containable, npc: NPC|null}.
@@ -414,7 +419,7 @@ class Container extends Interface {
   }
 }
 
-class Containable extends Interface {
+export class Containable extends Interface {
   // A small item fits in a pocket.
   static get SIZE_SMALL() {
     return 1;
@@ -470,7 +475,7 @@ class Containable extends Interface {
 // [Iskallt, Kyligt, Svalt, Ljummet (default), Varmt, Hett, Skållhett, Brinner]
 // och låta en mikro ticka saker åt höger en gång / minut och en frys åt
 // vänster?
-class Heatable extends Interface {
+export class Heatable extends Interface {
   // Finns fler på https://www.engineeringtoolbox.com/specific-heat-capacity-d_391.html
   // och https://en.wikipedia.org/wiki/Table_of_specific_heat_capacities.
   // Material.
@@ -554,7 +559,7 @@ class Heatable extends Interface {
 }
 
 const lunchboxImg = Resource.addAsset('img/matlada.png');
-class Lunchbox extends Item {
+export class Lunchbox extends Item {
   static get image() {
     return Resource.getAsset(lunchboxImg);
   }
@@ -606,7 +611,7 @@ class Lunchbox extends Item {
 }
 
 const microwaveImg = Resource.addAsset('img/mikro.png');
-class Microwave extends Item {
+export class Microwave extends Item {
   static get image() {
     return Resource.getAsset(microwaveImg);
   }

@@ -1,10 +1,9 @@
-'use strict';
-
+import {Controller} from './controller.js';
 /**
  * Represents an object with a sprite that can be rotated, scaled or otherwise
  * updated.
  */
-class PrerenderedObject {
+export class PrerenderedObject {
   // The object's sprite
   static get image() {
     return null;
@@ -181,7 +180,7 @@ class PrerenderedObject {
   }
 }
 
-class GameObject extends PrerenderedObject {
+export class GameObject extends PrerenderedObject {
   constructor(x, y, image = null, angle = null, scale = null, register = true) {
     super(image, angle, scale);
     this.x = x;
@@ -189,7 +188,7 @@ class GameObject extends PrerenderedObject {
     this.id = null;
 
     // this.physics = new PhysicsNull(this);	// Alla gameobjects har ett
-		// physics object, men default är ingen fysik.
+    // physics object, men default är ingen fysik.
 
     this.despawnTimer = -1;
 
@@ -238,7 +237,7 @@ class GameObject extends PrerenderedObject {
   }
 }
 
-class EffectObject extends GameObject {
+export class EffectObject extends GameObject {
   constructor(x, y, image = null, angle = null, scale = null, register = true) {
     super(x, y, image, angle, scale, register);
     // Status effects currently affecting this object
@@ -297,7 +296,7 @@ class EffectObject extends GameObject {
   }
 }
 
-class BaseEffect extends PrerenderedObject {
+export class BaseEffect extends PrerenderedObject {
   static get stackable() {
     return false;
   }

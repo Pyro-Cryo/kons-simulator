@@ -1,6 +1,12 @@
-'use strict';
+import {Resource} from './engine/resource.js';
+import {GameObject} from './engine/gameObject.js';
+import {Clock} from './clock.js';
+import {Hunger} from './commonVariables.js';
+import {Variable} from './variable.js';
+import {MonitoringModifier} from './variable.js';
+import {Containable} from './item.js';
 
-class BusyMetadata {
+export class BusyMetadata {
   /**
    * @param {string|null} actionDescription
    * @param {number|null} startedAt
@@ -28,7 +34,7 @@ class BusyMetadata {
 }
 
 const npcImg = Resource.addAsset('img/npc-placeholder.png');
-class NPC extends GameObject {
+export class NPC extends GameObject {
   static get image() {
     return Resource.getAsset(npcImg);
   }

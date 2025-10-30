@@ -1,9 +1,10 @@
-'use strict';
+import {GameObject} from './engine/gameObject.js';
+import {Minheap} from './engine/containers.js';
 
 let __clock_instance = null;
 const __CLOCK_NEVER = Symbol('never');
 
-class Clock extends GameObject {
+export class Clock extends GameObject {
   /** @returns {Clock | null} */
   static get instance() {
     return __clock_instance;

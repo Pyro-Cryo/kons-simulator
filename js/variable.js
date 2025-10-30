@@ -1,10 +1,11 @@
-'use strict';
+import {Minheap, LinkedList} from './engine/containers.js';
+import {Clock} from './clock.js';
 
 /**
  * Something that affects a variable's value. If a description is set, the
  * modifier is user-facing.
  */
-class Modifier {
+export class Modifier {
   /** @param {string|null} description */
   constructor(description = null) {
     this._description = description;
@@ -32,7 +33,7 @@ class Modifier {
 /**
  * Applies a flat bonus or malus until it (optionally) expires.
  */
-class FixedModifier extends Modifier {
+export class FixedModifier extends Modifier {
   /**
    * @param {number} amount
    * @param {number|null} duration
@@ -62,7 +63,7 @@ class FixedModifier extends Modifier {
  * the function is defined on [0, duration]. The modifier is zero-valued
  * outside this range.
  */
-class FunctionalModifier extends Modifier {
+export class FunctionalModifier extends Modifier {
   /**
    * @param {function(number):number} func
    * @param {number} duration
@@ -134,7 +135,7 @@ class FunctionalModifier extends Modifier {
 /**
  * A functional modifier where the progress is manually managed.
  */
-class ManualModifier extends FunctionalModifier {
+export class ManualModifier extends FunctionalModifier {
   /**
    * @param {function(number):number} func
    * @param {number} progressMax
@@ -162,7 +163,7 @@ class ManualModifier extends FunctionalModifier {
 /**
  * Monitors other variables to compute its own value.
  */
-class MonitoringModifier extends Modifier {
+export class MonitoringModifier extends Modifier {
   /**
    * @param {BaseVariable[]|BaseVariable} variables
    * @param {function(...number):number} func
@@ -266,7 +267,7 @@ class MonitoringModifier extends Modifier {
  * A scalar value that measures some aspect of an NPC or item.
  * Base class with properties for displaying.
  */
-class BaseVariable {
+export class BaseVariable {
   /** @returns {string | null} */
   static get title() {
     return null;
@@ -370,7 +371,7 @@ class BaseVariable {
 }
 
 /** A variable that accepts modifiers to its base value. */
-class Variable extends BaseVariable {
+export class Variable extends BaseVariable {
   /** @returns {number} */
   static get baseValue() {
     return 0;
@@ -437,7 +438,7 @@ class Variable extends BaseVariable {
 /**
  * Variable where modifiers are consumed one by one based on some sorting order.
  */
-class FurnaceVariable extends BaseVariable {
+export class FurnaceVariable extends BaseVariable {
   /** @returns {number} */
   static get baseValue() {
     return 0;

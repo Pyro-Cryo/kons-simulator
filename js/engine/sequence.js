@@ -1,9 +1,7 @@
-'use strict';
-
 /**
  * Basklass för att skapa (spawna) sekvenser av GameObjects.
  */
-class BaseSequence {
+export class BaseSequence {
   constructor() {
     this.iterating = false;
     this.currentSequence = [];
@@ -338,7 +336,7 @@ class BaseSequence {
   }
 }
 
-class ArgableSequence extends BaseSequence {
+export class ArgableSequence extends BaseSequence {
   /**
    * Köa ett visst antal objekt, med argument till konstruktorn. Följs av
    * immediately(), over() eller spaced().
@@ -420,7 +418,7 @@ class ArgableSequence extends BaseSequence {
 // /**
 //  * Sekvens med extra felsökningsmöjligheter
 //  */
-// class DebuggableSequence extends BaseSequence {
+// export class DebuggableSequence extends BaseSequence {
 //   constructor() {
 //     super();
 //     this._sent = {};

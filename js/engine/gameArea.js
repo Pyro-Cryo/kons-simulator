@@ -1,5 +1,3 @@
-'use strict';
-
 let _GameArea__GRID_ORIGIN_REVERSE_X = 0b01;
 let _GameArea__GRID_ORIGIN_REVERSE_Y = 0b10;
 let _GameArea_GRID_ORIGIN_UPPER_LEFT = 0;
@@ -8,7 +6,7 @@ let _GameArea_GRID_ORIGIN_UPPER_RIGHT = _GameArea__GRID_ORIGIN_REVERSE_X;
 let _GameArea_GRID_ORIGIN_LOWER_RIGHT =
   _GameArea__GRID_ORIGIN_REVERSE_X | _GameArea__GRID_ORIGIN_REVERSE_Y;
 
-class GameArea {
+export class GameArea {
   static get _GRID_ORIGIN_REVERSE_X() {
     return _GameArea__GRID_ORIGIN_REVERSE_X;
   }
