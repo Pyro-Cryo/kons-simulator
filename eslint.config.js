@@ -23,7 +23,15 @@ export default defineConfig([
           ignoreRegExpLiterals: true,
         },
       ],
-      indent: ['error', 2],
+      indent: ['error', 2, {SwitchCase: 1}],
+      "@typescript-eslint/no-unused-vars": [
+        'error',
+        {
+          // Tillåt _ som namn på oanvända variabler.
+          argsIgnorePattern: '^_$',
+          varsIgnorePattern: '^_$'
+        },
+      ],
     },
   },
   tseslint.configs.recommended,
