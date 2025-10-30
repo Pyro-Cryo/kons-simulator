@@ -1,134 +1,166 @@
 <!DOCTYPE html>
 <html>
-<head>
-	<title>KonsSim</title>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<meta name="description" content="Game of the Year 2024">
-	<meta name="keywords" content="Fysik, Teknisk Fysik, Fysiksektionen, Mottagning, 2024, Fadderiet, Konsulatet, Simulator, Teknisk Matematik, KTH">
-	<meta name="author" content="Pyro & Cryo">
-	<meta name="theme-color" content="#723d97">
-	<link rel="icon" type="image/png" href="img/fadderietslogga.png" />
-	
-	<!-- Font och ikoner -->
-	<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&family=Roboto+Mono&display=swap" rel="stylesheet" />
-	<!-- Sök ikoner på https://fonts.google.com/icons -->
-	<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet" />
-	<link rel="stylesheet" type="text/css" href="style.css">
+  <head>
+    <base href="." />
+    <title>KonsSim</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Game of the Year 2024" />
+    <meta
+      name="keywords"
+      content="Fysik, Teknisk Fysik, Fysiksektionen, Mottagning, 2024, Fadderiet, Konsulatet, Simulator, Teknisk Matematik, KTH" />
+    <meta name="author" content="Pyro & Cryo" />
+    <meta name="theme-color" content="#723d97" />
+    <link rel="icon" type="image/png" href="img/fadderietslogga.png" />
 
-	<!-- Kelvin -->
-	<script type="text/javascript" src="js/engine/containers.js"></script>
-	<script type="text/javascript" src="js/engine/resource.js"></script>
-	<script type="text/javascript" src="js/engine/splines.js"></script>
-	<!-- <script type="text/javascript" src="js/engine/animation.js"></script> -->
-	<!-- <script type="text/javascript" src="js/engine/sequence.js"></script> -->
-	<script type="text/javascript" src="js/engine/gameArea.js"></script>
-	<script type="text/javascript" src="js/engine/controller.js"></script>
-	<script type="text/javascript" src="js/engine/gameObject.js"></script>
-	<script type="text/javascript" src="js/engine/utils.js"></script>
-	
-	<!-- Objekt etc. specifika för kons-simulator -->
-	<script type="text/javascript" src="js/clock.js"></script>
-	<script type="text/javascript" src="js/variable.js"></script>
-	<script type="text/javascript" src="js/signaling.js"></script>
-	<script type="text/javascript" src="js/item.js"></script>
-	<script type="text/javascript" src="js/commonVariables.js"></script>
-	<script type="text/javascript" src="js/npc.js"></script>
-	<script type="text/javascript" src="js/furniture.js"></script>
-	<script type="text/javascript" src="js/inspector.js"></script>
+    <!-- Font och ikoner -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&family=Roboto+Mono&display=swap"
+      rel="stylesheet" />
+    <!-- Sök ikoner på https://fonts.google.com/icons -->
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons+Round"
+      rel="stylesheet" />
+    <link rel="stylesheet" type="text/css" href="style.css" />
 
-	<!-- Controller -->
-	<script type="text/javascript" src="js/konstroller.js"></script>
-</head>
-<body>
-	<!-- Inforutan i toppen -->
-	<div id="topbar" class="header" style="height: 64px;">
-        <div class="logo">
-            <img src="img/fadderietslogga.png" />
-            <div>KonsSim</div>
+    <!-- Kelvin -->
+    <script type="module" src="js/engine/containers.js"></script>
+    <script type="module" src="js/engine/resource.js"></script>
+    <script type="module" src="js/engine/splines.js"></script>
+    <!-- <script type="module" src="js/engine/animation.js"></script> -->
+    <!-- <script type="module" src="js/engine/sequence.js"></script> -->
+    <script type="module" src="js/engine/gameArea.js"></script>
+    <script type="module" src="js/engine/controller.js"></script>
+    <script type="module" src="js/engine/gameObject.js"></script>
+    <script type="module" src="js/engine/utils.js"></script>
+
+    <!-- Objekt etc. specifika för kons-simulator -->
+    <script type="module" src="js/clock.js"></script>
+    <script type="module" src="js/variable.js"></script>
+    <script type="module" src="js/signaling.js"></script>
+    <script type="module" src="js/item.js"></script>
+    <script type="module" src="js/commonVariables.js"></script>
+    <script type="module" src="js/npc.js"></script>
+    <script type="module" src="js/furniture.js"></script>
+    <script type="module" src="js/inspector.js"></script>
+
+    <!-- Controller -->
+    <script type="module" src="js/konstroller.js"></script>
+  </head>
+  <body>
+    <!-- Inforutan i toppen -->
+    <div id="topbar" class="header" style="height: 64px">
+      <div class="logo">
+        <img src="img/fadderietslogga.png" />
+        <div>KonsSim</div>
+      </div>
+
+      <div class="clock">
+        <div class="valueDisplay">
+          <div id="time" class="value">00:00</div>
+          Dag <span id="day">Ø</span>
         </div>
-
-		<div class="clock">
-            <div class="valueDisplay">
-                <div id="time" class="value">00:00</div>
-                Dag <span id="day">Ø</span>
-            </div>
-            <div id="playButton" class="clickableIcon">
-                <!-- Play -->
-                <span style="font-size: 32px;" class="material-icons-round">&#xe037;</span>
-                <!-- Pause -->
-                <span style="font-size: 32px;" class="material-icons-round hidden">&#xe034;</span>
-            </div>
-            <div id="fastForwardButton" class="clickableIcon">
-                <span style="font-size: 32px;" class="material-icons-round">&#xe01f;</span>
-            </div>
-		</div>
-
-        <div class="controls">
-            <div id="muteButton" class="clickableIcon">
-                <span style="font-size: 32px;" class="material-icons-round">&#xe050;</span>
-            </div>
-            <div id="unmuteButton" class="clickableIcon hidden">
-                <span style="font-size: 32px;" class="material-icons-round">&#xe04f;</span>
-            </div>
-            <div id="loadButton" class="clickableIcon">
-                <span style="font-size: 32px;" class="material-icons-round">&#xeaf3;</span>
-            </div>
-            <div id="saveButton" class="clickableIcon">
-                <span style="font-size: 32px;" class="material-icons-round">&#xe161;</span>
-            </div>
+        <div id="playButton" class="clickableIcon">
+          <!-- Play -->
+          <span style="font-size: 32px" class="material-icons-round"
+            >&#xe037;</span
+          >
+          <!-- Pause -->
+          <span style="font-size: 32px" class="material-icons-round hidden"
+            >&#xe034;</span
+          >
         </div>
-	</div>
+        <div id="fastForwardButton" class="clickableIcon">
+          <span style="font-size: 32px" class="material-icons-round"
+            >&#xe01f;</span
+          >
+        </div>
+      </div>
 
-	<div class="main">
-        <div class="game" style="width: 512px">
-            <canvas id="gameboard" width="512" height="768" style="background-color: aliceblue;">
-            </canvas>
-            <div id="messageBox" class="console">&gt;&nbsp;_</div>
+      <div class="controls">
+        <div id="muteButton" class="clickableIcon">
+          <span style="font-size: 32px" class="material-icons-round"
+            >&#xe050;</span
+          >
         </div>
-        <div class="menus">
-            <div id="inspector" class="hidden">
-				<div id="inspectorPrimaryInfo">
-					<div id="inspectorSpriteContainer" class="hidden">
-						<canvas id="inspectorSprite"></canvas>
-					</div>
-					<div>
-						<div id="inspectorTitle">Title</div>
-						<div id="inspectorDescription">Description</div>
-						<div id="inspectorCurrentAction">Current action</div>
-					</div>
-				</div>
-				<div id="inspectorSecondaryInfo">
-					<div id="inspectorVariables">
-						<div class="hidden template">
-							<div class="title"></div>
-							<!-- TODO: Vore snyggare med bars där det är möjligt -->
-							<div class="value"></div>
-						</div>
-					</div>
-				</div>
-			</div>
+        <div id="unmuteButton" class="clickableIcon hidden">
+          <span style="font-size: 32px" class="material-icons-round"
+            >&#xe04f;</span
+          >
         </div>
+        <div id="loadButton" class="clickableIcon">
+          <span style="font-size: 32px" class="material-icons-round"
+            >&#xeaf3;</span
+          >
+        </div>
+        <div id="saveButton" class="clickableIcon">
+          <span style="font-size: 32px" class="material-icons-round"
+            >&#xe161;</span
+          >
+        </div>
+      </div>
     </div>
 
-	<div class="footer">
-		KonsSim version <span id="version">0.0</span> - ett spel av <a href="https://github.com/Pyro-Cryo/kons-simulator" target="_blank">Pyro & Cryo</a>
-	</div>
+    <div class="main">
+      <div class="game" style="width: 512px">
+        <canvas
+          id="gameboard"
+          width="512"
+          height="768"
+          style="background-color: aliceblue">
+        </canvas>
+        <div id="messageBox" class="console">&gt;&nbsp;_</div>
+      </div>
+      <div class="menus">
+        <div id="inspector" class="hidden">
+          <div id="inspectorPrimaryInfo">
+            <div id="inspectorSpriteContainer" class="hidden">
+              <canvas id="inspectorSprite"></canvas>
+            </div>
+            <div>
+              <div id="inspectorTitle">Title</div>
+              <div id="inspectorDescription">Description</div>
+              <div id="inspectorCurrentAction">Current action</div>
+            </div>
+          </div>
+          <div id="inspectorSecondaryInfo">
+            <div id="inspectorVariables">
+              <div class="hidden template">
+                <div class="title"></div>
+                <!-- TODO: Vore snyggare med bars där det är möjligt -->
+                <div class="value"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
-	<!-- Pausmeny -->
-	<div id="modal" class="modal hidden">
-		<h2 id="modalTitle">Pausat</h2>
-		<div id="modalMessage" class="hidden"></div>
-		<div id="buttonTemplate" class="modalButton hidden">
-			<span class="buttonLabel"></span> <span style="font-size: 32px;" class="material-icons-round buttonIcon">&#xe037;</span>
-		</div>
-	</div>
+    <div class="footer">
+      KonsSim version <span id="version">0.0</span> - ett spel av
+      <a href="https://github.com/Pyro-Cryo/kons-simulator" target="_blank"
+        >Pyro & Cryo</a
+      >
+    </div>
 
-	<script type="text/javascript">
-		let controller;
-		window.addEventListener("load", () => {
-			controller = new Konstroller();
-		});
-	</script>
-</body>
+    <!-- Pausmeny -->
+    <div id="modal" class="modal hidden">
+      <h2 id="modalTitle">Pausat</h2>
+      <div id="modalMessage" class="hidden"></div>
+      <div id="buttonTemplate" class="modalButton hidden">
+        <span class="buttonLabel"></span>
+        <span style="font-size: 32px" class="material-icons-round buttonIcon"
+          >&#xe037;</span
+        >
+      </div>
+    </div>
+
+    <script type="module">
+      import {Konstroller} from './js/konstroller.js';
+      let controller;
+      window.addEventListener('load', () => {
+        controller = new Konstroller();
+      });
+    </script>
+  </body>
 </html>
