@@ -1,102 +1,114 @@
-"use strict";
+'use strict';
 
 let __clock_instance = null;
 const __CLOCK_NEVER = Symbol('never');
 
 class Clock extends GameObject {
-    /** @returns {Clock | null} */
-    static get instance() { return __clock_instance; }
-    static get realMillisecondsPerGameMinute() { return 2000; }
-    static get NEVER() { return __CLOCK_NEVER; }
+  /** @returns {Clock | null} */
+  static get instance() {
+    return __clock_instance;
+  }
+  static get realMillisecondsPerGameMinute() {
+    return 2000;
+  }
+  static get NEVER() {
+    return __CLOCK_NEVER;
+  }
 
-    /** @param {HTMLElement|null} timeElement */
-    constructor(timeElement = null) {
-        super(0, 0);
-        this._imageDirty = false;  // Not drawn.
-        this.elapsedRealMilliseconds = 0;
-        this.elapsedGameMinutes = 0;
-        this.timeElement = timeElement;
-        /** @type {Minheap<function():void>} */
-        this.callbacks = new Minheap();
+  /** @param {HTMLElement|null} timeElement */
+  constructor(timeElement = null) {
+    super(0, 0);
+    this._imageDirty = false; // Not drawn.
+    this.elapsedRealMilliseconds = 0;
+    this.elapsedGameMinutes = 0;
+    this.timeElement = timeElement;
+    /** @type {Minheap<function():void>} */
+    this.callbacks = new Minheap();
 
-        if (Clock.instance) {
-            throw new Error('Cannot create multiple clocks');
-        }
-        __clock_instance = this;
+    if (Clock.instance) {
+      throw new Error('Cannot create multiple clocks');
+    }
+    __clock_instance = this;
+  }
+
+  /**
+   * The current time, in minutes from the game start.
+   * @returns {number}
+   */
+  static now() {
+    return __clock_instance.elapsedGameMinutes;
+  }
+
+  /**
+   * @param {number} minutes
+   * @returns {number} The timestamp `minutes` into the future.
+   */
+  static after(minutes) {
+    return this.now() + minutes;
+  }
+
+  /**
+   * Schedule a callback to be invoked at a certain time.
+   * If the timestamp has already passed, the callback is immediately invoked.
+   * @param {function():any} callback
+   * @param {number} time
+   */
+  static schedule(callback, time) {
+    if (time <= this.now()) {
+      callback();
+    } else if (time !== __CLOCK_NEVER) {
+      this.instance.callbacks.push(callback, time);
+    }
+  }
+
+  /**
+   * Create a promise that is resolved after the given number of game minutes.
+   * @param {number} minutes
+   * @returns {Promise<void>}
+   */
+  static waitFor(minutes) {
+    return this.waitUntil(this.after(minutes));
+  }
+
+  /**
+   * Create a promise that is resolved at a certain time.
+   * If the timestamp has already passed, the promise is immediately resolved.
+   * @param {number} time
+   * @returns {Promise<void>}
+   */
+  static waitUntil(time) {
+    if (time === __CLOCK_NEVER) {
+      return Promise.reject(new Error('Promise would wait indefinitely'));
+    }
+    return new Promise((resolve) => this.schedule(resolve, time));
+  }
+
+  /** @param {number} time */
+  static formatTime(time) {
+    const hours = Math.floor(time / 60);
+    const minutes = Math.floor(time % 60);
+    return `${hours < 10 ? '0' + hours : hours}:${
+      minutes < 10 ? '0' + minutes : minutes
+    }`;
+  }
+
+  update(delta) {
+    this.elapsedRealMilliseconds += delta;
+    this.elapsedGameMinutes =
+      this.elapsedRealMilliseconds / Clock.realMillisecondsPerGameMinute;
+
+    if (this.timeElement !== null) {
+      const timeString = Clock.formatTime(this.elapsedGameMinutes);
+      if (this.timeElement.innerText !== timeString) {
+        this.timeElement.innerText = timeString;
+      }
     }
 
-    /**
-     * The current time, in minutes from the game start.
-     * @returns {number}
-     */
-    static now() {
-        return __clock_instance.elapsedGameMinutes;
+    while (
+      !this.callbacks.isEmpty() &&
+      this.callbacks.peekWeight() <= this.elapsedGameMinutes
+    ) {
+      this.callbacks.pop()();
     }
-
-    /**
-     * @param {number} minutes 
-     * @returns {number} The timestamp `minutes` into the future.
-     */
-    static after(minutes) {
-        return this.now() + minutes;
-    }
-
-    /**
-     * Schedule a callback to be invoked at a certain time.
-     * If the timestamp has already passed, the callback is immediately invoked.
-     * @param {function():any} callback 
-     * @param {number} time 
-     */
-    static schedule(callback, time) {
-        if (time <= this.now()) {
-            callback();
-        } else if (time !== __CLOCK_NEVER) {
-            this.instance.callbacks.push(callback, time);
-        }
-    }
-
-    /**
-     * Create a promise that is resolved after the given number of game minutes.
-     * @param {number} minutes 
-     * @returns {Promise<void>}
-     */
-    static waitFor(minutes) {
-        return this.waitUntil(this.after(minutes));
-    }
-
-    /**
-     * Create a promise that is resolved at a certain time.
-     * If the timestamp has already passed, the promise is immediately resolved.
-     * @param {number} time
-     * @returns {Promise<void>}
-     */
-    static waitUntil(time) {
-        if (time === __CLOCK_NEVER) {
-            return Promise.reject(new Error("Promise would wait indefinitely"));
-        }
-        return new Promise(resolve => this.schedule(resolve, time));
-    }
-
-    /** @param {number} time */
-    static formatTime(time) {
-        const hours = Math.floor(time / 60);
-        const minutes = Math.floor(time % 60);
-        return `${hours < 10 ? '0' + hours : hours}:${minutes < 10 ? '0' + minutes : minutes}`;
-    }
-
-    update(delta) {
-        this.elapsedRealMilliseconds += delta;
-        this.elapsedGameMinutes = this.elapsedRealMilliseconds / Clock.realMillisecondsPerGameMinute;
-
-        if (this.timeElement !== null) {
-            const timeString = Clock.formatTime(this.elapsedGameMinutes);
-            if (this.timeElement.innerText !== timeString) {
-                this.timeElement.innerText = timeString;
-            }
-        }
-
-        while (!this.callbacks.isEmpty() && this.callbacks.peekWeight() <= this.elapsedGameMinutes) {
-            this.callbacks.pop()();
-        }
-    }
+  }
 }
