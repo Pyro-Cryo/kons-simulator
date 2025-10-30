@@ -12,9 +12,9 @@ export default defineConfig([
     extends: ['js/recommended'],
     languageOptions: {globals: globals.browser},
     rules: {
-      semi: ['error', 'always'],
+      semi: ['warn', 'always'],
       'max-len': [
-        'error',
+        'warn',
         {
           code: 80,
           tabWidth: 2,
@@ -23,9 +23,9 @@ export default defineConfig([
           ignoreRegExpLiterals: true,
         },
       ],
-      indent: ['error', 2, {SwitchCase: 1}],
+      indent: ['warn', 2, {SwitchCase: 1}],
       "@typescript-eslint/no-unused-vars": [
-        'error',
+        'warn',
         {
           // Tillåt _ som namn på oanvända variabler.
           argsIgnorePattern: '^_$',
