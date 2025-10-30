@@ -23,13 +23,13 @@ export default defineConfig([
           ignoreRegExpLiterals: true,
         },
       ],
-      indent: ['warn', 2, {SwitchCase: 1}],
-      "@typescript-eslint/no-unused-vars": [
+      indent: ['warn', 2, {SwitchCase: 1, offsetTernaryExpressions: true}],
+      '@typescript-eslint/no-unused-vars': [
         'warn',
         {
           // Tillåt _ som namn på oanvända variabler.
           argsIgnorePattern: '^_$',
-          varsIgnorePattern: '^_$'
+          varsIgnorePattern: '^_$',
         },
       ],
     },
