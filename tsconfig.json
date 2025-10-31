@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+        "module": "esnext",
+        "target": "es2024",
+        "outDir": "out",
+        "strict": true,
+        "sourceMap": true,
+        "allowJs": true
+    },
+    "include": [
+        "js/**/*"
+    ]
+}

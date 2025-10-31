@@ -128,4 +128,22 @@ För att få lite variation har de också olika personlighetsdrag och humörsmä
 
 * Linter är eslint. Behöver installeras lokalt med t.ex. npm: `npm install eslint typescript-eslint @eslint/css @eslint/markdown --save-dev`. Sedan kan den användas tillsammans med sin [VS Code-extension](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint).
 * Prettier som formatter, finns t.ex. som [VS Code-extension](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode).
-
+* Installera typescript med `npm install -g typescript`, bygg sen med `tsc -p .` i rotmappen eller [sätt upp VS Code](https://code.visualstudio.com/docs/typescript/typescript-compiling) och tryck `Ctrl + Shift + B`:
+```json
+// .vscode/tasks.json
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "type": "typescript",
+      "tsconfig": "tsconfig.json",
+      "problemMatcher": ["$tsc"],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "label": "Build TS"
+    }
+  ]
+}
+```

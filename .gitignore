@@ -5,3 +5,6 @@ package-lock.json
 
 # VS Code
 .vscode/
+
+# Build output directory
+out/
