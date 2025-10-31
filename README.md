@@ -126,6 +126,6 @@ För att få lite variation har de också olika personlighetsdrag och humörsmä
 
 ## Utvecklingsmiljö
 
-* Linter är eslint. Behöver installeras lokalt med t.ex. npm: `npm install eslint --save-dev`. Sedan kan den användas tillsammans med vs-code extension.
-* Prettier som formatter, finns t.ex. som vs-code extension.
+* Linter är eslint. Behöver installeras lokalt med t.ex. npm: `npm install eslint typescript-eslint @eslint/css @eslint/markdown --save-dev`. Sedan kan den användas tillsammans med sin [VS Code-extension](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint).
+* Prettier som formatter, finns t.ex. som [VS Code-extension](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode).
 
