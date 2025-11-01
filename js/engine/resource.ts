@@ -228,6 +228,7 @@ const RESOURCES = new Resources();
  *     i cachen.
  * @returns Ett objekt som kan användas för att komma åt objektet som hämtats.
  */
+export function addAsset(path: string): Asset<HTMLImageElement>;
 export function addAsset<T extends {src: string}>(
   path: string,
   type: ResourceType<T>
