@@ -1,5 +1,5 @@
 import {GameArea} from './gameArea.js';
-import {Resource} from './resource.js';
+import {loadAssets} from './resource.js';
 import {LinkedList} from './containers.js';
 
 let _Controller__instances = [];
@@ -128,7 +128,7 @@ export class Controller {
 
     this.constructor._instances.push(this);
 
-    Resource.loadAssets(this.onAssetLoadUpdate.bind(this))
+    loadAssets(this.onAssetLoadUpdate.bind(this))
       .then(this.onAssetsLoaded.bind(this))
       .catch(this.onAssetsLoadFailure.bind(this));
   }
@@ -156,9 +156,9 @@ export class Controller {
     this.setMessage(`Laddar (${progress}/${total}) ...`);
   }
   onAssetsLoaded() {}
-  onAssetsLoadFailure(reason) {}
+  onAssetsLoadFailure(_) {}
 
-  onDifficultyChange(e) {}
+  onDifficultyChange(_) {}
 
   togglePause() {
     if (this.isPaused) this.onPlay();

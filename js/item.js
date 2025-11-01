@@ -1,5 +1,5 @@
 import {GameObject} from './engine/gameObject.js';
-import {Resource} from './engine/resource.js';
+import {addAsset} from './engine/resource.js';
 import {SignalObserver} from './signaling.js';
 import {Temperature} from './commonVariables.js';
 import {Clock} from './clock.js';
@@ -558,10 +558,10 @@ export class Heatable extends Interface {
   }
 }
 
-const lunchboxImg = Resource.addAsset('img/matlada.png');
+const lunchboxImg = addAsset('img/matlada.png');
 export class Lunchbox extends Item {
   static get image() {
-    return Resource.getAsset(lunchboxImg);
+    return lunchboxImg.get();
   }
   static get scale() {
     return 0.2;
@@ -610,10 +610,10 @@ export class Lunchbox extends Item {
   }
 }
 
-const microwaveImg = Resource.addAsset('img/mikro.png');
+const microwaveImg = addAsset('img/mikro.png');
 export class Microwave extends Item {
   static get image() {
-    return Resource.getAsset(microwaveImg);
+    return microwaveImg.get();
   }
   static get scale() {
     return 0.2;
