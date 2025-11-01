@@ -36,8 +36,8 @@ export class InfiniteBag<T> {
     this.fill(elements, copies);
   }
 
-  /** Whether the bag contains any items. */
-  get empty(): boolean {
+  /** Whether the bag contains no items. */
+  isEmpty(): boolean {
     return this.elements.length === 0;
   }
 
@@ -63,14 +63,14 @@ export class InfiniteBag<T> {
 
   /** Peek at the next element in the bag without drawing. */
   peek(): T {
-    if (this.empty)
+    if (this.isEmpty())
       throw new Error('Bag is empty, fill it first');
     return this.shuffledElements[this.shuffledElements.length - 1];
   }
 
   /** Draw the next element from the bag. */
   pop(): T {
-    if (this.empty)
+    if (this.isEmpty())
       throw new Error('Bag is empty, fill it first');
     // If the bag is not empty, shuffledElements always contains at least one
     // element.
