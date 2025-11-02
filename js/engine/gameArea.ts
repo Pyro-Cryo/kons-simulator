@@ -1,77 +1,68 @@
-let _GameArea__GRID_ORIGIN_REVERSE_X = 0b01;
-let _GameArea__GRID_ORIGIN_REVERSE_Y = 0b10;
-let _GameArea_GRID_ORIGIN_UPPER_LEFT = 0;
-let _GameArea_GRID_ORIGIN_LOWER_LEFT = _GameArea__GRID_ORIGIN_REVERSE_Y;
-let _GameArea_GRID_ORIGIN_UPPER_RIGHT = _GameArea__GRID_ORIGIN_REVERSE_X;
-let _GameArea_GRID_ORIGIN_LOWER_RIGHT =
-  _GameArea__GRID_ORIGIN_REVERSE_X | _GameArea__GRID_ORIGIN_REVERSE_Y;
+export enum GridOrigin {
+  REVERSE_X = 0b01,
+  REVERSE_Y = 0b10,
+  UPPER_LEFT = 0,
+  LOWER_LEFT = REVERSE_Y,
+  UPPER_RIGHT = REVERSE_X,
+  LOWER_RIGHT = REVERSE_X | REVERSE_Y,
+}
 
+/**
+ * Abstraction of a canvas with an overlaid grid, to aid in rendering sprites
+ * and shapes. The convention is that (x, y) is a position in canvas coordinates
+ * (pixels), while (_x, _y) is a position in the grid. The x axis is horizontal
+ * and the y axis vertical, but the grid origin can be configured.
+ */
 export class GameArea {
-  static get _GRID_ORIGIN_REVERSE_X() {
-    return _GameArea__GRID_ORIGIN_REVERSE_X;
-  }
-  static get _GRID_ORIGIN_REVERSE_Y() {
-    return _GameArea__GRID_ORIGIN_REVERSE_Y;
-  }
-  static get GRID_ORIGIN_UPPER_LEFT() {
-    return _GameArea_GRID_ORIGIN_UPPER_LEFT;
-  }
-  static get GRID_ORIGIN_LOWER_LEFT() {
-    return _GameArea_GRID_ORIGIN_LOWER_LEFT;
-  }
-  static get GRID_ORIGIN_UPPER_RIGHT() {
-    return _GameArea_GRID_ORIGIN_UPPER_RIGHT;
-  }
-  static get GRID_ORIGIN_LOWER_RIGHT() {
-    return _GameArea_GRID_ORIGIN_LOWER_RIGHT;
-  }
+  readonly context: CanvasRenderingContext2D;
+  private _gridWidth: number;
+  private _gridHeight: number;
+  /** True if `gridWidth` and `gridHeight` are both non-null. */
+  public readonly usesGrid: boolean;
+  private _unitWidth: number = 1;
+  private _unitHeight: number = 1;
+  private _scaleFactor: number = 1;
+  // Draw offset in canvas units.
+  private drawOffsetX: number = 0;
+  private drawOffsetY: number = 0;
 
   constructor(
-    canvas,
-    gridWidth,
-    gridHeight,
-    gridOrigin = GameArea.GRID_ORIGIN_UPPER_LEFT
+    private readonly canvas: HTMLCanvasElement,
+    gridWidth: number | null,
+    gridHeight: number | null,
+    public gridOrigin = GridOrigin.UPPER_LEFT,
   ) {
-    this.canvas = canvas;
-    /** @type {CanvasRenderingContext2D} */
-    this.context = this.canvas.getContext('2d');
-    this.gridOrigin = gridOrigin;
+    const context = this.canvas.getContext('2d');
+    if (!context) {
+      throw new Error('Failed to get 2D rendering context from canvas');
+    }
+    this.context = context;
 
-    // Draw offset in canvas units
-    this.drawOffsetX = 0;
-    this.drawOffsetY = 0;
-
-    if (gridWidth === null && gridHeight === null) {
-      this._usesGrid = false;
-      this._gridWidth = this.canvas.width;
-      this._gridHeight = this.canvas.height;
-
-      this._unitWidth = 1;
-      this._unitHeight = 1;
-      this._scaleFactor = 1;
-    } else if (gridWidth !== null && gridHeight !== null) {
-      this._usesGrid = true;
-      this._gridWidth = gridWidth;
-      this._gridHeight = gridHeight;
-
-      this._unitWidth = Math.abs(this.gridToCanvasX(1) - this.gridToCanvasX(0));
-      this._unitHeight = Math.abs(
-        this.gridToCanvasY(1) - this.gridToCanvasY(0)
-      );
-      this._scaleFactor = Math.sqrt(
-        (Math.pow(this.unitWidth, 2) + Math.pow(this.unitHeight, 2)) / 2
-      );
-    } else {
+    if ((gridWidth === null) !== (gridHeight === null)) {
       throw new Error(
         `Either set both gridWidth and gridHeight to null, or neither: ` +
           `${gridWidth} x ${gridHeight}`
       );
     }
+    this.usesGrid = gridWidth !== null && gridHeight !== null;
+
+    if (this.usesGrid) {
+      this._gridWidth = gridWidth!;
+      this._gridHeight = gridHeight!;
+      this.updateDerivedGridParameters();
+    } else {
+      this._gridWidth = this.canvas.width;
+      this._gridHeight = this.canvas.width;
+    }
   }
 
   set width(value) {
     this.canvas.width = value;
-    if (!this.usesGrid) this._gridWidth = value;
+    if (this.usesGrid) {
+      this.updateDerivedGridParameters();
+    } else {
+      this._gridWidth = value;
+    }
   }
   get width() {
     return this.canvas.width;
@@ -79,7 +70,11 @@ export class GameArea {
 
   set height(value) {
     this.canvas.height = value;
-    if (!this.usesGrid) this._gridHeight = value;
+    if (this.usesGrid) {
+      this.updateDerivedGridParameters();
+    } else {
+      this._gridHeight = value;
+    }
   }
   get height() {
     return this.canvas.height;
@@ -97,13 +92,13 @@ export class GameArea {
     return this._scaleFactor;
   }
 
-  get usesGrid() {
-    return this._usesGrid;
-  }
-
   set gridWidth(value) {
     this._gridWidth = value;
-    if (!this._usesGrid) this.canvas.width = value;
+    if (this.usesGrid) {
+      this.updateDerivedGridParameters();
+    } else {
+      this.canvas.width = value;
+    }
   }
   get gridWidth() {
     return this._gridWidth;
@@ -111,61 +106,73 @@ export class GameArea {
 
   set gridHeight(value) {
     this._gridHeight = value;
-    if (!this._usesGrid) this.canvas.height = value;
+    if (this.usesGrid) {
+      this.updateDerivedGridParameters();
+    } else {
+      this.canvas.height = value;
+    }
   }
   get gridHeight() {
     return this._gridHeight;
   }
 
+  private updateDerivedGridParameters() {
+    this._unitWidth = Math.abs(this.gridToCanvasX(1) - this.gridToCanvasX(0));
+    this._unitHeight = Math.abs(this.gridToCanvasY(1) - this.gridToCanvasY(0));
+    this._scaleFactor = Math.sqrt(
+      (Math.pow(this._unitWidth, 2) + Math.pow(this._unitHeight, 2)) / 2
+    );
+  }
+
   // + 0.5 var korrekt för campusdefence när vi ville att saker ritades i
   // mitten av tiles, men generellt rimligare att gridpunkten (0,0) är exakt
   // ett hörn
-  gridToCanvasX(x, considerOffset = true) {
-    if (this.gridOrigin & GameArea._GRID_ORIGIN_REVERSE_X)
+  gridToCanvasX(_x: number, considerOffset = true) {
+    if (this.gridOrigin & GridOrigin.REVERSE_X)
       return (
-        this.canvas.width * (1 - x /* + 0.5*/ / this._gridWidth) -
-        considerOffset * this.drawOffsetX
+        this.canvas.width * (1 - _x /* + 0.5*/ / this._gridWidth) -
+        +considerOffset * this.drawOffsetX
       );
     else
       return (
-        (this.canvas.width * x) /* + 0.5*/ / this._gridWidth -
-        considerOffset * this.drawOffsetX
+        (this.canvas.width * _x) /* + 0.5*/ / this._gridWidth -
+        +considerOffset * this.drawOffsetX
       );
   }
-  gridToCanvasY(y, considerOffset = true) {
-    if (this.gridOrigin & GameArea._GRID_ORIGIN_REVERSE_Y)
+  gridToCanvasY(_y: number, considerOffset = true) {
+    if (this.gridOrigin & GridOrigin.REVERSE_Y)
       return (
-        this.canvas.height * (1 - y /* + 0.5*/ / this._gridHeight) -
-        considerOffset * this.drawOffsetY
+        this.canvas.height * (1 - _y /* + 0.5*/ / this._gridHeight) -
+        +considerOffset * this.drawOffsetY
       );
     else
       return (
-        (this.canvas.height * y) /* + 0.5*/ / this._gridHeight -
-        considerOffset * this.drawOffsetY
+        (this.canvas.height * _y) /* + 0.5*/ / this._gridHeight -
+        +considerOffset * this.drawOffsetY
       );
   }
 
-  canvasToGridX(x, considerOffset = true) {
-    if (this.gridOrigin & GameArea._GRID_ORIGIN_REVERSE_X)
+  canvasToGridX(x: number, considerOffset = true) {
+    if (this.gridOrigin & GridOrigin.REVERSE_X)
       return (
-        (1 - (x + considerOffset * this.drawOffsetX) / this.canvas.width) *
+        (1 - (x + +considerOffset * this.drawOffsetX) / this.canvas.width) *
         this._gridWidth /* - 0.5*/
       );
     else
       return (
-        ((x + considerOffset * this.drawOffsetX) / this.canvas.width) *
+        ((x + +considerOffset * this.drawOffsetX) / this.canvas.width) *
         this._gridWidth /* - 0.5*/
       );
   }
-  canvasToGridY(y, considerOffset = true) {
-    if (this.gridOrigin & GameArea._GRID_ORIGIN_REVERSE_Y)
+  canvasToGridY(y: number, considerOffset = true) {
+    if (this.gridOrigin & GridOrigin.REVERSE_Y)
       return (
-        (1 - (y + considerOffset * this.drawOffsetY) / this.canvas.height) *
+        (1 - (y + +considerOffset * this.drawOffsetY) / this.canvas.height) *
         this._gridHeight /* - 0.5*/
       );
     else
       return (
-        ((y + considerOffset * this.drawOffsetY) / this.canvas.height) *
+        ((y + +considerOffset * this.drawOffsetY) / this.canvas.height) *
         this._gridHeight /* - 0.5*/
       );
   }
@@ -189,7 +196,12 @@ export class GameArea {
     if (y) this.drawOffsetY = 0;
   }
 
-  centerCameraOn(_x, _y, horizontally = true, vertically = true) {
+  centerCameraOn(
+    _x: number,
+    _y: number,
+    horizontally = true,
+    vertically = true
+  ) {
     if (horizontally)
       this.drawOffsetX = this.gridToCanvasX(_x, false) - this.canvas.width / 2;
     if (vertically)
@@ -197,14 +209,14 @@ export class GameArea {
   }
 
   keepInFrame(
-    _x,
-    _y,
-    width = 0,
-    height = null,
-    marginTop = 0,
-    marginRight = null,
-    marginBottom = null,
-    marginLeft = null
+    _x: number,
+    _y: number,
+    width: number = 0,
+    height: number | null = null,
+    marginTop: number = 0,
+    marginRight: number | null = null,
+    marginBottom: number | null = null,
+    marginLeft: number | null = null
   ) {
     if (height === null) height = width;
     if (marginRight === null) marginRight = marginTop;
@@ -230,19 +242,19 @@ export class GameArea {
 
   /**
    * Checks whether any part of a rectangle would be visible when drawn.
-   * @param {Number} _x x position of the center in grid coordinates
-   * @param {Number} _y y position of the center in grid coordinates
-   * @param {Number} width width in grid units
-   * @param {Number} height height in grid units
-   * @param {boolean} widthHeightIsCanvasUnits whether the width and height are
+   * @param _x x position of the center in grid coordinates
+   * @param _y y position of the center in grid coordinates
+   * @param width width in grid units
+   * @param height height in grid units
+   * @param widthHeightIsCanvasUnits whether the width and height are
    *    given in canvas units
    */
   isInFrame(
-    _x,
-    _y,
-    width = 0,
-    height = null,
-    widthHeightIsCanvasUnits = false
+    _x: number,
+    _y: number,
+    width: number = 0,
+    height: number | null = null,
+    widthHeightIsCanvasUnits: boolean = false
   ) {
     if (height === null) height = width;
     if (!widthHeightIsCanvasUnits) {
@@ -262,9 +274,18 @@ export class GameArea {
     this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
   }
 
-  // Draws an image centered around (x, y) with the specified angle (in radians)
-  // and scale
-  draw(image, _x, _y, angle, scale, considerOffset = true) {
+  /**
+   * Draws an image centered around (x, y) with the specified angle (in radians)
+   * and scale.
+   */
+  draw(
+    image: ImageBitmap | HTMLCanvasElement,
+    _x: number,
+    _y: number,
+    angle: number = 0,
+    scale: number = 1,
+    considerOffset = true
+  ) {
     const x = this.gridToCanvasX(_x, considerOffset);
     const y = this.gridToCanvasY(_y, considerOffset);
     if (!angle) {
@@ -304,17 +325,19 @@ export class GameArea {
     }
   }
 
-  // Draws a subimage from an image, centered around (x, y) with the specified
-  // angle (in radians) and scale
+  /**
+   * Draws a subimage from an image, centered around (x, y) with the specified
+   * angle (in radians) and scale.
+   */
   drawSubimage(
-    image,
-    subimageIndex,
-    subimageWidth,
-    _x,
-    _y,
-    angle,
-    scale,
-    considerOffset
+    image: ImageBitmap | HTMLCanvasElement,
+    subimageIndex: number,
+    subimageWidth: number,
+    _x: number,
+    _y: number,
+    angle: number = 0,
+    scale: number = 1,
+    considerOffset: boolean = true
   ) {
     const x = this.gridToCanvasX(_x, considerOffset);
     const y = this.gridToCanvasY(_y, considerOffset);
@@ -349,7 +372,13 @@ export class GameArea {
     }
   }
 
-  disc(_x, _y, radius = 1, color = '#000000', considerOffset = true) {
+  disc(
+    _x: number,
+    _y: number,
+    radius: number = 1,
+    color: string = '#000000',
+    considerOffset: boolean = true
+  ) {
     const x = this.gridToCanvasX(_x, considerOffset);
     const y = this.gridToCanvasY(_y, considerOffset);
     const fillStyle = this.context.fillStyle;
@@ -360,17 +389,23 @@ export class GameArea {
     this.context.fillStyle = fillStyle;
   }
 
-  square(_x, _y, side = 1, color = '#000000', considerOffset = true) {
+  square(
+    _x: number,
+    _y: number,
+    side: number = 1,
+    color: string = '#000000',
+    considerOffset: boolean = true
+  ) {
     this.rect(_x, _y, side, side, color, considerOffset);
   }
 
   rect(
-    _x,
-    _y,
-    width = 1,
-    height = 1,
-    color = '#000000',
-    considerOffset = true
+    _x: number,
+    _y: number,
+    width: number = 1,
+    height: number = 1,
+    color: string = '#000000',
+    considerOffset: boolean = true
   ) {
     const x = this.gridToCanvasX(_x, considerOffset) - width / 2;
     const y = this.gridToCanvasY(_y, considerOffset) - height / 2;
@@ -386,15 +421,15 @@ export class GameArea {
   }
 
   bar(
-    _x,
-    _y,
-    offset,
-    length,
-    width,
-    ratio,
-    fgColor = '#FF0000',
-    bgColor = '#00FF00',
-    considerOffset = true
+    _x: number,
+    _y: number,
+    offset: number,
+    length: number,
+    width: number,
+    ratio: number,
+    fgColor: string = '#FF0000',
+    bgColor: string = '#00FF00',
+    considerOffset: boolean = true
   ) {
     const x = this.gridToCanvasX(_x, considerOffset);
     const y = this.gridToCanvasY(_y, considerOffset);
@@ -409,13 +444,13 @@ export class GameArea {
   }
 
   line(
-    _x0,
-    _y0,
-    _x1,
-    _y1,
-    linewidth = 1,
-    color = 'black',
-    considerOffset = true
+    _x0: number,
+    _y0: number,
+    _x1: number,
+    _y1: number,
+    linewidth: number = 1,
+    color: string = 'black',
+    considerOffset: boolean = true
   ) {
     this.context.beginPath();
     this.context.strokeStyle = color;
@@ -433,28 +468,26 @@ export class GameArea {
 
   /**
    * Draw some text
-   * @param {number} _x Horizontal position in grid coords
-   * @param {number} _y Vertical position in grid coords
-   * @param {string} str The text to draw
-   * @param {number | string} font Either a font size or a whole CSS font
-   *    specification.
-   * @param {string} color The color to draw the text in
-   * @param {string} alignment Text alignment (`"center"`, `"left"`, or
-   *    `"right"`)
-   * @param {string} baseline Baseline of the text when drawn, see
+   * @param _x Horizontal position in grid coords
+   * @param _y Vertical position in grid coords
+   * @param str The text to draw
+   * @param font Either a font size or a whole CSS font specification.
+   * @param color The color to draw the text in
+   * @param alignment Text alignment (`"center"`, `"left"`, or `"right"`)
+   * @param baseline Baseline of the text when drawn, see
    *    https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/textBaseline
-   * @param {boolean} considerOffset `true` if camera offset should be used,
+   * @param considerOffset `true` if camera offset should be used,
    *    `false` if offsets should be taken as zero
    */
   text(
-    _x,
-    _y,
-    str,
-    font = '16px sans',
-    color = 'black',
-    alignment = 'center',
-    baseline = null,
-    considerOffset = true
+    _x: number,
+    _y: number,
+    str: string,
+    font: string = '16px sans',
+    color: string = 'black',
+    alignment: CanvasTextAlign = 'center',
+    baseline?: CanvasTextBaseline,
+    considerOffset: boolean = true
   ) {
     const x = this.gridToCanvasX(_x, considerOffset);
     const y = this.gridToCanvasY(_y, considerOffset);

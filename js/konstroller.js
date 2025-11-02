@@ -1,5 +1,5 @@
 import {Controller} from './engine/controller.js';
-import {GameArea} from './engine/gameArea.js';
+import {GridOrigin} from './engine/gameArea.js';
 import {Inspector} from './inspector.js';
 import {Clock} from './clock.js';
 import {NPC} from './npc.js';
@@ -19,7 +19,7 @@ export class Konstroller extends Controller {
       /*updateInterval=*/ null,
       /*gridWidth=*/ 32,
       /*gridHeight=*/ 48,
-      /*gridOrigin=*/ GameArea.GRID_ORIGIN_LOWER_LEFT,
+      /*gridOrigin=*/ GridOrigin.LOWER_LEFT,
       /*fastForwardFactor=*/ 4
     );
     this.elements = {

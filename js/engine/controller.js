@@ -1,4 +1,4 @@
-import {GameArea} from './gameArea.js';
+import {GameArea, GridOrigin} from './gameArea.js';
 import {loadAssets} from './resource.js';
 import {LinkedList} from './containers.js';
 
@@ -37,7 +37,7 @@ export class Controller {
     updateInterval = null,
     gridWidth = null,
     gridHeight = null,
-    gridOrigin = GameArea.GRID_ORIGIN_UPPER_LEFT,
+    gridOrigin = GridOrigin.UPPER_LEFT,
     fastForwardFactor = 3,
     cancelFFOnPause = false
     // musicFF = true,
