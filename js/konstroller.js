@@ -6,9 +6,7 @@ import {NPC} from './npc.js';
 import {Lunchbox, Microwave, Container, Usable} from './item.js';
 
 export class Konstroller extends Controller {
-  static get STORAGE_PREFIX() {
-    return 'konssimulator_';
-  }
+  STORAGE_PREFIX = 'konssimulator_';
   static get VERSION() {
     return [0, 1];
   }

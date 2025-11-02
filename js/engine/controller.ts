@@ -2,92 +2,110 @@ import {GameArea, GridOrigin} from './gameArea.js';
 import {loadAssets} from './resource.js';
 import {LinkedList} from './containers.js';
 
-let _Controller__instances = [];
+interface GameObjectInterface {
+  id: number | null;
+  update(delta: number): void;
+  draw(gameArea: GameArea): void;
+  translate(dx: number, dy: number): void;
+}
+
+const _Controller__instances: Controller[] = [];
 export class Controller {
-  static get _instances() {
-    return _Controller__instances;
-  }
-  static set _instances(value) {
-    _Controller__instances = value;
-  }
   static get isSingleInstance() {
-    return this._instances.length === 1;
+    return _Controller__instances.length === 1;
   }
-  /**
-   * @type {Controller}
-   */
   static get instance() {
-    if (this.isSingleInstance) return this._instances[0];
-    else
-      throw new Error('Multiple controllers exist: ' + this._instances.length);
+    if (this.isSingleInstance) {
+      return _Controller__instances[0];
+    }
+    throw new Error(
+      'Multiple controllers exist: ' + _Controller__instances.length
+    );
   }
 
-  static get WIDTH_PX() {
-    return null;
-  }
-  static get HEIGHT_PX() {
-    return null;
-  }
-  static get STORAGE_PREFIX() {
-    return 'kelvin_';
-  }
+  protected WIDTH_PX: number | null = null;
+  protected HEIGHT_PX: number | null = null;
+  protected STORAGE_PREFIX: string = 'kelvin_';
+
+  public readonly gameArea: GameArea;
+  private useAnimationFrameForUpdate: boolean;
+  private mainInterval: number | null = null;
+  private timestampLast: number | null = null;
+  protected isPaused: boolean = true;
+  /** Whether the game is currently being fast-forwarded. */
+  protected isFF: boolean = false;
+  protected readonly minDelta: number = 0;
+  protected readonly maxDelta: number = 1000 / 24; // about 42 ms
+  protected readonly abandonFrameDeltaThreshold: number = this.maxDelta * 2;
+  protected _fastForwardFactor: number = 3;
+  private drawLoop: number | null = null;
+  protected clearOnDraw: boolean = true;
+
+  /** The ID of the next registered object. */
+  protected idCounter: number = 0;
+  /** Layers holding all objects that receive update and draw calls. */
+  protected layers: LinkedList<GameObjectInterface>[] = [];
+  protected currentlyChangingLayers: Map<
+    GameObjectInterface,
+    {source: number; destination: number}
+  > = new Map();
+  protected scheduledWorldScroll: {x: number; y: number} = {x: 0, y: 0};
+
+  private playbutton: HTMLElement | null =
+    document.getElementById('playButton');
+  private ffbutton: HTMLButtonElement | null = document.getElementById(
+    'fastForwardButton'
+  ) as HTMLButtonElement | null;
+  private difficultySelect: HTMLElement | null =
+    document.getElementById('difficultySelect');
+  private muteButton: HTMLElement | null =
+    document.getElementById('muteButton');
+  private unmuteButton: HTMLElement | null =
+    document.getElementById('unmuteButton');
+  private messageBox: HTMLElement | null =
+    document.getElementById('messageBox');
+
+  protected audioContext: AudioContext;
+  protected volume: number = 0.1;
+  protected audioContextGain: GainNode;
+  protected audioContextSource: AudioNode | null = null;
+  private audioContextSuspendingTimeout: number | null = null;
+  private isMuted: boolean;
 
   constructor(
-    canvas,
-    updateInterval = null,
-    gridWidth = null,
-    gridHeight = null,
-    gridOrigin = GridOrigin.UPPER_LEFT,
-    fastForwardFactor = 3,
-    cancelFFOnPause = false
+    canvas: HTMLCanvasElement | string,
+    private updateInterval: number | null = null,
+    gridWidth: number | null = null,
+    gridHeight: number | null = null,
+    gridOrigin: GridOrigin = GridOrigin.UPPER_LEFT,
+    fastForwardFactor: number = 3,
     // musicFF = true,
+    protected cancelFFOnPause: boolean = false
   ) {
     if (!canvas) {
       throw new Error('Canvas not provided');
     }
-    if (typeof canvas === 'string') canvas = document.getElementById(canvas);
-    if (this.constructor.WIDTH_PX !== null) {
-      canvas.width = this.constructor.WIDTH_PX;
+    if (typeof canvas === 'string') {
+      const canvasElement = document.getElementById(canvas);
+      if (canvasElement === null) {
+        throw new Error(`Could not find canvas element ${canvas}`);
+      } else if (!(canvasElement instanceof HTMLCanvasElement)) {
+        throw new Error(`Not a canvas element: ${canvas}`);
+      }
+      canvas = canvasElement;
     }
-    if (this.constructor.HEIGHT_PX !== null) {
-      canvas.height = this.constructor.HEIGHT_PX;
+    if (this.WIDTH_PX !== null) {
+      canvas.width = this.WIDTH_PX;
+    }
+    if (this.HEIGHT_PX !== null) {
+      canvas.height = this.HEIGHT_PX;
     }
     this.gameArea = new GameArea(canvas, gridWidth, gridHeight, gridOrigin);
 
-    this.updateInterval = updateInterval;
-    this._useAnimationFrameForUpdate = this.updateInterval === null;
-    this.mainInterval = null;
-    this.timestampLast = null;
-    this.isPaused = true;
-    this.isFF = false;
-    this.minDelta = 0;
-    this.maxDelta = 1000 / 24; // about 42 ms
-    this.abandonFrameDeltaThreshold = this.maxDelta * 2;
-
+    this.useAnimationFrameForUpdate = this.updateInterval === null;
     this.fastForwardFactor = fastForwardFactor;
-    this.cancelFFOnPause = cancelFFOnPause;
-
-    this.drawLoop = null;
-    // The id of the next registered object
-    this.idCounter = 0;
-    /**
-     * Layers holding all objects that receive update and draw calls
-     * @type {LinkedList<GameObject>[]}
-     */
-    this.layers = [];
-    this.currentlyChangingLayers = new Map();
-    this.clearOnDraw = true;
-
-    this.scheduledWorldScroll = {x: 0, y: 0};
 
     // Buttons
-    this.playbutton = document.getElementById('playButton');
-    this.ffbutton = document.getElementById('fastForwardButton');
-    this.resetbutton = document.getElementById('resetButton');
-    this.difficultySelect = document.getElementById('difficultySelect');
-    this.muteButton = document.getElementById('muteButton');
-    this.unmuteButton = document.getElementById('unmuteButton');
-
     if (this.playbutton) this.playbutton.onclick = this.togglePause.bind(this);
     if (this.ffbutton) {
       this.ffbutton.onclick = this.toggleFastForward.bind(this);
@@ -97,21 +115,17 @@ export class Controller {
       this.difficultySelect.onchange = this.onDifficultyChange.bind(this);
 
     // Soundtrack stuff.
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    /** @type {AudioContext} */
+    this.isMuted = JSON.parse(
+      window.localStorage.getItem(this.STORAGE_PREFIX + 'mute') ?? 'false'
+    );
     this.audioContext = new AudioContext();
     this.audioContext.suspend();
-    this.volume = 0.1;
     this.audioContextGain = new GainNode(this.audioContext, {
       gain: this.volume,
     });
     this.audioContextGain.connect(this.audioContext.destination);
-    this.audioContextSource = null;
     this.audioContextSuspendingTimeout = null;
     // this.musicSpeedupOnFF = musicFF;
-    this.muted = JSON.parse(
-      window.localStorage.getItem(this.constructor.STORAGE_PREFIX + 'mute')
-    );
     if (this.muteButton)
       this.muteButton.addEventListener('click', (e) => {
         this.onMute();
@@ -123,10 +137,7 @@ export class Controller {
         e.preventDefault();
       });
 
-    // Info field
-    this.messageBox = document.getElementById('messageBox');
-
-    this.constructor._instances.push(this);
+    _Controller__instances.push(this);
 
     loadAssets(this.onAssetLoadUpdate.bind(this))
       .then(this.onAssetsLoaded.bind(this))
@@ -144,21 +155,21 @@ export class Controller {
     return this._fastForwardFactor;
   }
 
-  startDrawLoop() {
-    this.drawLoop = window.requestAnimationFrame(this.draw.bind(this));
+  protected startDrawLoop() {
+    this.drawLoop = requestAnimationFrame(this.draw.bind(this));
   }
-  stopDrawLoop() {
-    window.cancelAnimationFrame(this.drawLoop);
+  protected stopDrawLoop() {
+    cancelAnimationFrame(this.drawLoop!);
     this.drawLoop = null;
   }
 
-  onAssetLoadUpdate(progress, total) {
+  protected onAssetLoadUpdate(progress: number, total: number) {
     this.setMessage(`Laddar (${progress}/${total}) ...`);
   }
-  onAssetsLoaded() {}
-  onAssetsLoadFailure(_) {}
+  protected onAssetsLoaded() {}
+  protected onAssetsLoadFailure(_: unknown) {}
 
-  onDifficultyChange(_) {}
+  protected onDifficultyChange(_: unknown) {}
 
   togglePause() {
     if (this.isPaused) this.onPlay();
@@ -167,21 +178,21 @@ export class Controller {
 
   toggleFastForward() {
     if (this.isFF) {
-      if (!this._useAnimationFrameForUpdate) {
-        clearInterval(this.mainInterval);
+      if (!this.useAnimationFrameForUpdate) {
+        clearInterval(this.mainInterval!);
         this.mainInterval = setInterval(
           () => this.update(),
-          this.updateInterval
+          this.updateInterval!
         );
       }
       this.isFF = false;
       this.offFastForward();
     } else {
-      if (!this._useAnimationFrameForUpdate) {
-        clearInterval(this.mainInterval);
+      if (!this.useAnimationFrameForUpdate) {
+        clearInterval(this.mainInterval!);
         this.mainInterval = setInterval(
           () => this.update(),
-          this.updateInterval / this._fastForwardFactor
+          this.updateInterval! / this._fastForwardFactor
         );
       }
       this.isFF = true;
@@ -189,8 +200,12 @@ export class Controller {
     }
   }
 
-  setMusic(source, loopStart = 0, loopEnd = null) {
-    if (source instanceof Audio) {
+  setMusic(
+    source: HTMLAudioElement | ArrayBuffer,
+    loopStart = 0,
+    loopEnd = null
+  ) {
+    if (source instanceof HTMLAudioElement) {
       this.audioContextSource =
         this.audioContext.createMediaElementSource(source);
       this.audioContextSource.connect(this.audioContextGain);
@@ -204,18 +219,20 @@ export class Controller {
           loopEnd: loopEnd ?? audioBuffer.duration,
         });
         this.audioContextSource.connect(this.audioContextGain);
-        this.audioContextSource.start();
+        (this.audioContextSource as AudioBufferSourceNode).start();
       });
     } else {
-      throw new Error(
-        `Invalid type of music source: ${source} (${source.constructor.name})`
-      );
+      let type: string = typeof source;
+      if (type === 'object') {
+        type = (source as object).constructor.name;
+      }
+      throw new Error(`Invalid type of music source: ${source} (${type})`);
     }
     // if (this.isFF)
     //     this.currentMusic.playbackRate = Math.sqrt(this.fastForwardFactor);
   }
 
-  onMusicPlay() {
+  protected onMusicPlay() {
     if (this.audioContextSuspendingTimeout !== null) {
       clearTimeout(this.audioContextSuspendingTimeout);
       this.audioContextSuspendingTimeout = null;
@@ -224,11 +241,11 @@ export class Controller {
       this.audioContext.resume();
     }
     this.audioContextGain.gain.setValueAtTime(
-      this.muted ? 0 : this.volume,
+      this.isMuted ? 0 : this.volume,
       this.audioContext.currentTime + 0.5
     );
   }
-  onMusicPause() {
+  protected onMusicPause() {
     this.audioContextGain.gain.setValueAtTime(
       0,
       this.audioContext.currentTime + 0.5
@@ -243,9 +260,9 @@ export class Controller {
       );
     }
   }
-  setVolume(volume) {
+  setVolume(volume: number) {
     this.volume = volume;
-    if (!this.muted) {
+    if (!this.isMuted) {
       this.audioContextGain.gain.linearRampToValueAtTime(
         volume,
         this.audioContext.currentTime + 0.5
@@ -261,10 +278,10 @@ export class Controller {
       );
     if (this.muteButton) this.muteButton.classList.add('hidden');
     if (this.unmuteButton) this.unmuteButton.classList.remove('hidden');
-    this.muted = true;
+    this.isMuted = true;
     window.localStorage.setItem(
-      this.constructor.STORAGE_PREFIX + 'mute',
-      JSON.stringify(this.muted)
+      this.STORAGE_PREFIX + 'mute',
+      JSON.stringify(this.isMuted)
     );
   }
   onUnMute() {
@@ -274,24 +291,24 @@ export class Controller {
     );
     if (this.muteButton) this.muteButton.classList.remove('hidden');
     if (this.unmuteButton) this.unmuteButton.classList.add('hidden');
-    this.muted = false;
+    this.isMuted = false;
     window.localStorage.setItem(
-      this.constructor.STORAGE_PREFIX + 'mute',
-      JSON.stringify(this.muted)
+      this.STORAGE_PREFIX + 'mute',
+      JSON.stringify(this.isMuted)
     );
   }
 
   onPlay() {
     this.isPaused = false;
     this.timestampLast = null;
-    if (this._useAnimationFrameForUpdate)
-      this.mainInterval = window.requestAnimationFrame(this.update.bind(this));
+    if (this.useAnimationFrameForUpdate)
+      this.mainInterval = requestAnimationFrame(this.update.bind(this));
     else
       this.mainInterval = setInterval(
         () => this.update(),
         this.isFF
-          ? this.updateInterval / this._fastForwardFactor
-          : this.updateInterval
+          ? this.updateInterval! / this._fastForwardFactor
+          : this.updateInterval!
       );
 
     if (this.playbutton) {
@@ -303,9 +320,9 @@ export class Controller {
 
   onPause() {
     this.isPaused = true;
-    if (this._useAnimationFrameForUpdate)
-      window.cancelAnimationFrame(this.mainInterval);
-    else clearInterval(this.mainInterval);
+    if (this.useAnimationFrameForUpdate)
+      cancelAnimationFrame(this.mainInterval!);
+    else clearInterval(this.mainInterval!);
     this.mainInterval = null;
 
     if (this.playbutton) {
@@ -333,7 +350,7 @@ export class Controller {
     //     this.currentMusic.playbackRate = 1;
   }
 
-  setMessage(message, pureText = true) {
+  setMessage(message: string, pureText = true) {
     if (this.messageBox) {
       if (pureText) this.messageBox.innerText = message;
       else this.messageBox.innerHTML = message;
@@ -354,12 +371,12 @@ export class Controller {
   }
 
   // Clear the canvas and let all objects redraw themselves
-  update(timestamp) {
-    if (!this._useAnimationFrameForUpdate) timestamp = new Date().getTime();
+  update(timestamp?: number) {
+    timestamp ??= new Date().getTime();
 
     // Skip first frame
     if (this.timestampLast === null) {
-      if (this._useAnimationFrameForUpdate)
+      if (this.useAnimationFrameForUpdate)
         this.mainInterval = window.requestAnimationFrame(
           this.update.bind(this)
         );
@@ -370,7 +387,7 @@ export class Controller {
     let delta = timestamp - this.timestampLast;
 
     if (delta < this.minDelta) {
-      if (this._useAnimationFrameForUpdate)
+      if (this.useAnimationFrameForUpdate)
         this.mainInterval = window.requestAnimationFrame(
           this.update.bind(this)
         );
@@ -381,7 +398,7 @@ export class Controller {
     // Prevent single frames with too large delta,
     // which otherwise cause collision detection / physics issues etc.
     if (delta > this.abandonFrameDeltaThreshold) {
-      if (this._useAnimationFrameForUpdate)
+      if (this.useAnimationFrameForUpdate)
         this.mainInterval = window.requestAnimationFrame(
           this.update.bind(this)
         );
@@ -389,7 +406,7 @@ export class Controller {
     }
     delta = Math.min(this.maxDelta, delta);
 
-    if (this._useAnimationFrameForUpdate && this.isFF)
+    if (this.useAnimationFrameForUpdate && this.isFF)
       delta *= this._fastForwardFactor;
 
     for (const [obj, change] of this.currentlyChangingLayers.entries()) {
@@ -422,11 +439,11 @@ export class Controller {
       this.scheduledWorldScroll.y = 0;
     }
 
-    if (this._useAnimationFrameForUpdate)
+    if (this.useAnimationFrameForUpdate)
       this.mainInterval = window.requestAnimationFrame(this.update.bind(this));
   }
 
-  scrollWorld(x, y) {
+  scrollWorld(x: number, y: number) {
     this.scheduledWorldScroll.x += x;
     this.scheduledWorldScroll.y += y;
   }
@@ -443,8 +460,10 @@ export class Controller {
     this.drawLoop = window.requestAnimationFrame(this.draw.bind(this));
   }
 
-  ensureLayerExists(layer) {
-    if (layer < 0) throw new Error(`Layer cannot be negative, got: ${layer}`);
+  ensureLayerExists(layer: number) {
+    if (layer < 0) {
+      throw new Error(`Layer cannot be negative, got: ${layer}`);
+    }
 
     if (layer >= this.layers.length) {
       this.layers = this.layers.concat(
@@ -455,10 +474,11 @@ export class Controller {
     }
   }
 
-  // Register an object to receive update calls.
-  // It should have an update method, a draw method accepting a GameArea, and
-  // allow for setting an id
-  registerObject(object, layer = 0) {
+  /**
+   * Register an object to receive update calls. It should have an update
+   * method, a draw method accepting a GameArea, and allow for setting an id.
+   */
+  registerObject(object: GameObjectInterface, layer = 0) {
     this.ensureLayerExists(layer);
     this.layers[layer].push(object);
     object.id = this.idCounter++;
@@ -466,14 +486,17 @@ export class Controller {
 
   /**
    * Immediately changes the layer of an object. Prefer scheduleLayerChange()
-   * during update calls,
-   * or some objects may miss an update since the lists are modified while they
-   * are being iterated over.
-   * @param {GameObject} object
-   * @param {number} source The layer that the object is currently in.
-   * @param {number} destination The layer that the object should move to.
+   * during update calls, or some objects may miss an update since the lists
+   * are modified while they are being iterated over.
+   * @param object
+   * @param source The layer that the object is currently in.
+   * @param destination The layer that the object should move to.
    */
-  changeLayer(object, source, destination) {
+  changeLayer(
+    object: GameObjectInterface,
+    source: number,
+    destination: number
+  ) {
     if (source < 0 || source >= this.layers.length) {
       throw new Error(
         `Invalid source layer: ${source} (number of layers is ` +
@@ -492,9 +515,13 @@ export class Controller {
   /**
    * Schedules a layer change before the next update call.
    */
-  scheduleLayerChange(object, source, destination) {
+  scheduleLayerChange(
+    object: GameObjectInterface,
+    source: number,
+    destination: number
+  ) {
     if (this.currentlyChangingLayers.has(object)) {
-      source = this.currentlyChangingLayers.get(object).source;
+      source = this.currentlyChangingLayers.get(object)!.source;
     }
     this.currentlyChangingLayers.set(object, {
       source: source,
@@ -503,7 +530,7 @@ export class Controller {
   }
 
   // Make the object stop receiving update calls.
-  unregisterObject(object) {
+  unregisterObject(object: GameObjectInterface) {
     object.id = null;
   }
 
@@ -523,9 +550,6 @@ export class Controller {
    * intended for debugging only.
    */
   get objects() {
-    return this.layers.reduce(
-      (previous, current) => previous.concat(current.toArray()),
-      /*initialValue=*/ []
-    );
+    return this.layers.flatMap((layer) => layer.toArray());
   }
 }
