@@ -1,3 +1,5 @@
+export type Drawable = ImageBitmap | HTMLCanvasElement | HTMLImageElement;
+
 export enum GridOrigin {
   REVERSE_X = 0b01,
   REVERSE_Y = 0b10,
@@ -279,7 +281,7 @@ export class GameArea {
    * and scale.
    */
   draw(
-    image: ImageBitmap | HTMLCanvasElement,
+    image: Drawable,
     _x: number,
     _y: number,
     angle: number = 0,
@@ -330,7 +332,7 @@ export class GameArea {
    * angle (in radians) and scale.
    */
   drawSubimage(
-    image: ImageBitmap | HTMLCanvasElement,
+    image: Drawable,
     subimageIndex: number,
     subimageWidth: number,
     _x: number,

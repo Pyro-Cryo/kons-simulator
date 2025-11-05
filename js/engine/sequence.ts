@@ -109,7 +109,7 @@ function cloneInstruction(instruction: Instruction): Instruction {
   return instruction;
 }
 
-class SequenceBuilder {
+class SequenceBuilder implements UncommittedBuilder, CommittedBuilder {
   private committedSequence: Instruction[] = [];
   private uncommittedSequence: Instruction[] = [];
 

@@ -1,37 +1,48 @@
-type Constructor<T> = new () => T;
-type ResourceType<T> = Constructor<T> | typeof JSON | string | ArrayBuffer;
+type Loadable = EventTarget & {src: string};
+type LoadableConstructor = new () => Loadable;
+type ResourceType =
+  | LoadableConstructor
+  | typeof String
+  | typeof ArrayBuffer
+  | typeof JSON;
+type Resource<T extends ResourceType> =
+  | InstanceType<Exclude<T, typeof JSON>>
+  | unknown;
 type OnUpdate = (progress: number, total: number) => void;
 
-export interface Asset<T> {
-  /** Hämta objektet från cachen. */
-  get(): T;
+/** Placeholder för ett objekt som kommer att hämtas när controllern laddas. */
+export class Asset<T> {
+  constructor(
+    /** Hämta objektet från cachen. loadAssets() måste ha körts. */
+    public readonly get: () => T
+  ) {}
 }
 
-interface AssetSpec<T, V> {
+interface AssetSpec<T extends ResourceType, V> {
   /** URI för objektet som ska hämtas. */
   path: string;
   /** Typen som objektet ska läsas in som. */
-  type: ResourceType<T>;
+  type: T;
   /**
    * Mappning som appliceras på objektet efter att det lästs in men innan det
    * cacheas.
    */
-  map: (item: T) => V;
+  map: (item: Resource<T>) => V;
   /** Körs om vi misslyckas med att hämta ett objekt. */
   onError: (reason: unknown) => void;
 }
 
-interface RegisteredAsset<T, V> {
-  type: ResourceType<T>;
-  map?: (item: T) => V;
+interface RegisteredAsset<T extends ResourceType, V> {
+  type: T;
+  map?: (item: Resource<T>) => V;
 }
 
 class Resources {
   private registeredAssets = new Map<
     string,
-    RegisteredAsset<unknown, unknown>
+    RegisteredAsset<ResourceType, unknown>
   >();
-  private loadedAssets = new Map<string, unknown>();
+  private loadedAssets = new Map<string, Resource<ResourceType>>();
   private assetsDirty = false;
   private assetsCurrentlyLoading = false;
 
@@ -46,13 +57,13 @@ class Resources {
    */
   addAsset(
     path: string,
-    type: ResourceType<unknown> = Image,
+    type: ResourceType = Image,
     map?: (item: unknown) => unknown
   ): Asset<unknown> {
     if (this.assetsCurrentlyLoading)
       throw new Error('Cannot add assets while assets are currently loading.');
 
-    this.registeredAssets.set(path, {type, map});
+    this.registeredAssets.set(path, {type: type as never, map});
 
     if (this.loadedAssets.has(path)) {
       this.loadedAssets.delete(path);
@@ -61,7 +72,7 @@ class Resources {
 
     this.assetsDirty = true;
 
-    return {get: () => this.getAsset(path)};
+    return new Asset(() => this.getAsset(path));
   }
 
   /**
@@ -74,10 +85,13 @@ class Resources {
     if (checkDirty && this.assetsDirty)
       throw new Error('All assets not loaded');
 
-    if (this.loadedAssets.has(path)) return this.loadedAssets.get(path);
-    else if (!checkDirty && this.registeredAssets.has(path))
+    if (this.loadedAssets.has(path)) {
+      return this.loadedAssets.get(path);
+    } else if (!checkDirty && this.registeredAssets.has(path)) {
       throw new Error('Asset not yet loaded: ' + path);
-    else throw new Error('Asset not registered: ' + path);
+    } else {
+      throw new Error('Asset not registered: ' + path);
+    }
   }
 
   async loadAssets(onUpdate?: OnUpdate): Promise<void> {
@@ -120,7 +134,10 @@ class Resources {
    * @param onUpdate Körs varje gång ett objekt har hämtats (och
    *     onload körts). Kan t.ex. användas för loading bars.
    */
-  private load(resources: AssetSpec<unknown, unknown>[], onUpdate?: OnUpdate) {
+  private load(
+    resources: AssetSpec<ResourceType, unknown>[],
+    onUpdate?: OnUpdate
+  ) {
     let progress = 0;
     const items = [];
 
@@ -140,7 +157,10 @@ class Resources {
   }
 }
 
-const RESPONSE_GETTERS = new Map<unknown, (response: Response) => unknown>([
+const RESPONSE_GETTERS = new Map<
+  ResourceType,
+  ((response: Response) => Promise<Resource<ResourceType>>)
+>([
   [JSON, (response: Response) => response.json()],
   [String, (response: Response) => response.text()],
   [ArrayBuffer, (response: Response) => response.arrayBuffer()],
@@ -156,7 +176,7 @@ const RESPONSE_GETTERS = new Map<unknown, (response: Response) => unknown>([
  */
 function loadSingle(
   path: string,
-  type: ResourceType<unknown> = Image,
+  type: ResourceType = Image,
   map?: (item: unknown) => unknown
 ): Promise<unknown> {
   let promise;
@@ -173,9 +193,7 @@ function loadSingle(
   } else {
     promise = new Promise((resolve, reject) => {
       try {
-        const item = new (type as Constructor<unknown>)() as {
-          src: string;
-        } & EventTarget;
+        const item = new (type as LoadableConstructor)();
         if (item instanceof Audio) {
           let needsResolving = true;
           item.addEventListener('canplaythrough', () => {
@@ -229,18 +247,18 @@ const RESOURCES = new Resources();
  * @returns Ett objekt som kan användas för att komma åt objektet som hämtats.
  */
 export function addAsset(path: string): Asset<HTMLImageElement>;
-export function addAsset<T extends {src: string}>(
+export function addAsset<T extends ResourceType>(
   path: string,
-  type: ResourceType<T>
-): Asset<T>;
-export function addAsset<T extends {src: string}, V>(
+  type: T
+): Asset<Resource<T>>;
+export function addAsset<T extends ResourceType, V>(
   path: string,
-  type: ResourceType<T>,
-  map: (item: T) => V
+  type: T,
+  map: (item: Resource<T>) => V
 ): Asset<V>;
 export function addAsset(
   path: string,
-  type: ResourceType<unknown> = Image,
+  type: ResourceType = Image,
   map?: (item: unknown) => unknown
 ): Asset<unknown> {
   return RESOURCES.addAsset(path, type, map);
@@ -255,4 +273,3 @@ export function addAsset(
 export async function loadAssets(onUpdate?: OnUpdate): Promise<void> {
   return RESOURCES.loadAssets(onUpdate);
 }
-

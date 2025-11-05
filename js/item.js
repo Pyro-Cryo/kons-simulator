@@ -558,14 +558,9 @@ export class Heatable extends Interface {
   }
 }
 
-const lunchboxImg = addAsset('img/matlada.png');
 export class Lunchbox extends Item {
-  static get image() {
-    return lunchboxImg.get();
-  }
-  static get scale() {
-    return 0.2;
-  }
+  static IMAGE = addAsset('img/matlada.png');
+  static SCALE = 0.2;
   static get title() {
     return 'Matlåda';
   }
@@ -610,14 +605,9 @@ export class Lunchbox extends Item {
   }
 }
 
-const microwaveImg = addAsset('img/mikro.png');
 export class Microwave extends Item {
-  static get image() {
-    return microwaveImg.get();
-  }
-  static get scale() {
-    return 0.2;
-  }
+  static IMAGE = addAsset('img/mikro.png');
+  static SCALE = 0.2;
   static get title() {
     return 'Mikrovågsugn';
   }

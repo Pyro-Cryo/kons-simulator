@@ -33,14 +33,9 @@ export class BusyMetadata {
   }
 }
 
-const npcImg = addAsset('img/npc-placeholder.png');
 export class NPC extends GameObject {
-  static get image() {
-    return npcImg.get();
-  }
-  static get scale() {
-    return 0.2;
-  }
+  static IMAGE = addAsset('img/npc-placeholder.png');
+  static SCALE = 0.2;
 
   constructor(x, y) {
     super(x, y);
