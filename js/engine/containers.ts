@@ -1,88 +1,114 @@
+/** A doubly linked list node. */
+interface Node<T> {
+  obj: T;
+  prev: Node<T> | null;
+  next: Node<T> | null;
+}
+
 /**
  * A doubly linked list used to store objects.
- * @template T
  */
-export class LinkedList {
-  constructor() {
-    /** @type {{obj: T} | null} */
+export class LinkedList<T> {
+  // If the first node is null iff the last node is null iff the count is zero.
+  private first: Node<T> | null = null;
+  private last: Node<T> | null = null;
+  private count: number = 0;
+
+  constructor(elements: Iterable<T> = []) {
     this.first = null;
-    /** @type {{obj: T} | null} */
     this.last = null;
-    /** @type {number} */
     this.count = 0;
-  }
 
-  /**
-   * Add an object at the end of the list.
-   * @param {T} obj
-   */
-  push(obj) {
-    if (this.first === null) {
-      this.first = {obj: obj, next: null, prev: null};
-      this.last = this.first;
-    } else {
-      let node = {obj: obj, next: null, prev: this.last};
-      this.last.next = node;
-      this.last = node;
+    for (const obj of elements) {
+      this.push(obj);
     }
-    this.count++;
+  }
+
+  /** The length of the linked list. */
+  get length(): number {
+    return this.count;
+  }
+
+  /** Whether the list contains no items. */
+  isEmpty(): boolean {
+    return this.count === 0;
   }
 
   /**
-   * Add an object at the beginning of the list.
-   * @param {T} obj
+   * Adds an object at the end of the list.
    */
-  prepend(obj) {
-    if (this.first === null) {
-      this.first = {obj: obj, next: null, prev: null};
-      this.last = this.first;
-    } else {
-      let node = {obj: obj, next: this.first, prev: null};
-      this.first.prev = node;
+  push(obj: T) {
+    const node = {obj: obj, next: null, prev: this.last};
+    if (this.last === null) {
+      // The list is empty.
       this.first = node;
+    } else {
+      // Insert the node at the end.
+      this.last.next = node;
     }
+    this.last = node;
     this.count++;
   }
 
   /**
-   * Remove the first occurrence of an object from the list. Will iterate
-   * over the entire list in the worst case. Returns true if the object
-   * was present in the list, and false otherwise.
-   * @param {T} obj
+   * Adds an object at the beginning of the list.
    */
-  remove(obj) {
+  prepend(obj: T) {
+    const node = {obj: obj, next: this.first, prev: null};
+    if (this.first === null) {
+      // The list is empty.
+      this.last = node;
+    } else {
+      // Insert the node at the beginning.
+      this.first.prev = node;
+    }
+    this.first = node;
+    this.count++;
+  }
+
+  /**
+   * Removes the first occurrence of an object from the list. Will iterate
+   * over the entire list in the worst case.
+   * @param {T} obj
+   * @returns true if the object was present in the list, and false otherwise.
+   */
+  remove(obj: T): boolean {
     // Iterate backwards since frequently moved objects are likely found near
     // the end.
     for (let current = this.last; current !== null; current = current.prev) {
       if (current.obj === obj) {
-        this._remove(current);
+        this.removeNode(current);
         return true;
       }
     }
     return false;
   }
 
-  // Remove a node from the list
-  // Note that this accept a linked list node, not the data itself,
-  // which you persumably get by iterating through the list using .next
-  _remove(node) {
+  /**
+   * Removes a node from the list.
+   */
+  private removeNode(node: Node<T>) {
     if (node === this.first) {
+      // The node was first, so point `first` to the second node (if there is
+      // one).
       this.first = node.next;
-      if (this.first === null) this.last = null;
-      else this.first.prev = null;
     }
     if (node === this.last) {
+      // The node was last, so point `last` to the second last node (if there is
+      // one).
       this.last = node.prev;
-      if (this.last === null) this.first = null;
-      else this.last.next = null;
+    }
+    if (node.prev !== null) {
+      // Tell the node's preceding neighbor to point to the node's succeeding
+      // neighbor instead, if there is one.
+      node.prev.next = node.next;
+    }
+    if (node.next !== null) {
+      // Tell the node's succeeding neighbor to point to the node's preceding
+      // neighbor instead, if there is one.
+      node.next.prev = node.prev;
     }
 
-    if (node.prev !== null) node.prev.next = node.next;
-
-    if (node.next !== null) node.next.prev = node.prev;
-
-    node.next = undefined;
-    node.prev = undefined;
     this.count--;
   }
 
@@ -102,43 +128,43 @@ export class LinkedList {
   }
 
   /**
-   * Iterates over the objects for which the function returns true.
-   * Objects for which the function returns false are removed from the list.
-   * @param {function(T):boolean} func
-   * @yields {T}
+   * Iterates over the objects for which the predicate returns true. Objects
+   * for which the function returns false are removed from the list.
    */
-  *filterIterate(func) {
+  *filterIterate(predicate: (obj: T) => boolean): Generator<T> {
     for (let current = this.first; current !== null; current = current.next) {
-      if (func(current.obj)) {
+      if (predicate(current.obj)) {
         yield current.obj;
       } else {
-        let c = current.prev;
-        this._remove(current);
-        current = c ?? this.first;
-        if (current === null) break;
-        else continue;
+        // `current` will be moved forward by the loop, so point it to the
+        // previous node and remove the current one. 
+        const prev = current.prev;
+        this.removeNode(current);
+        current = prev ?? this.first;
+        if (current === null) {
+          // The list has been emptied.
+          break;
+        }
       }
     }
   }
 
-  /**
-   * @returns {T[]}
-   */
-  toArray() {
+  toArray(): T[] {
     return [...this];
   }
+}
+
+interface HeapNode<T> {
+  obj: T;
+  weight: number;  
 }
 
 /**
  * A min-heap for storing objects and their weights.
  * Objects with smaller weights are returned first.
- * @template T
  */
-export class Minheap {
-  constructor() {
-    /** @type {{obj: T, weight: number}[]} */
-    this.elements = [];
-  }
+export class Minheap<T> {
+  private elements: HeapNode<T>[] = [];
 
   get length() {
     return this.elements.length;
@@ -150,9 +176,8 @@ export class Minheap {
 
   /**
    * Gets the object with the lowest weight.
-   * @return {T}
    */
-  peek() {
+  peek(): T {
     if (this.isEmpty()) {
       throw new Error(`Heap is empty`);
     }
@@ -163,7 +188,7 @@ export class Minheap {
    * Gets the lowest weight of any object in the heap.
    * @returns {number}
    */
-  peekWeight() {
+  peekWeight(): number {
     if (this.isEmpty()) {
       throw new Error(`Heap is empty`);
     }
@@ -174,12 +199,12 @@ export class Minheap {
    * Gets the object with the lowest weight and removes it from the heap.
    * @return {T}
    */
-  pop() {
+  pop(): T {
     if (this.isEmpty()) {
       throw new Error(`Heap is empty`);
     }
     const obj = this.elements[0].obj;
-    const last = this.elements.pop();
+    const last = this.elements.pop()!;
     if (this.isEmpty()) {
       return obj;
     }
@@ -213,10 +238,10 @@ export class Minheap {
   }
 
   /**
-   * @param {T} obj The object to add to the heap.
-   * @param {number} weight The weight of the object.
+   * @param obj The object to add to the heap.
+   * @param weight The weight of the object.
    */
-  push(obj, weight) {
+  push(obj: T, weight: number) {
     this.elements.push({obj: obj, weight: weight});
 
     let i = this.elements.length - 1;
@@ -234,8 +259,8 @@ export class Minheap {
   }
 
   /**
-   * The smallest element is yielded first but the remaining
-   * elements are not in any particular order.
+   * The smallest element is yielded first but the remaining elements are not in
+   * any particular order.
    * @yields {T}
    */
   *[Symbol.iterator]() {

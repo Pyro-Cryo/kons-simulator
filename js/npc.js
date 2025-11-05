@@ -1,4 +1,4 @@
-import {Resource} from './engine/resource.js';
+import {addAsset} from './engine/resource.js';
 import {GameObject} from './engine/gameObject.js';
 import {Clock} from './clock.js';
 import {Hunger} from './commonVariables.js';
@@ -33,14 +33,9 @@ export class BusyMetadata {
   }
 }
 
-const npcImg = Resource.addAsset('img/npc-placeholder.png');
 export class NPC extends GameObject {
-  static get image() {
-    return Resource.getAsset(npcImg);
-  }
-  static get scale() {
-    return 0.2;
-  }
+  static IMAGE = addAsset('img/npc-placeholder.png');
+  static SCALE = 0.2;
 
   constructor(x, y) {
     super(x, y);
