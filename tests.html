@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Unit tests</title>
+    <script type="module" src="out/engine/testing.js"></script>
+    <script type="module" src="out/engine/tests/testing.js"></script>
+    <script type="module">
+      import {run, logResults} from './out/engine/testing.js';
+      import {Testing} from './out/engine/tests/testing.js';
+      const tests = [Testing];
+
+      function prettyName(name) {
+        if (name.startsWith('test')) {
+          name = name.substring('test'.length);
+        }
+        return name.replace(
+          /(?!^)([A-Z])/g,
+          (_, letter) => ' ' + letter.toLowerCase()
+        );
+      }
+
+      function logResult(result) {
+        logResults(result);
+        let suiteElement = document.querySelector(`.suite#${result.suite}`);
+        if (!suiteElement) {
+          const suiteTemplate = document.querySelector('.suite.template');
+          suiteElement = suiteTemplate.cloneNode(true);
+          suiteElement.classList.remove('template');
+          suiteElement.id = result.suite;
+          suiteElement.querySelector('.suiteName').innerText = prettyName(
+            result.suite
+          );
+          suiteTemplate.parentElement.appendChild(suiteElement);
+        }
+
+        const testTemplate = suiteElement.querySelector('.template');
+        const testElement = testTemplate.cloneNode(true);
+        testElement.classList.remove('template');
+        testElement.classList.add(result.verdict);
+        testElement.querySelector('.testName').innerText = prettyName(
+          result.test
+        );
+        testTemplate.parentElement.appendChild(testElement);
+
+        const data = result.data ?? result.reason;
+        /** @type HTMLDivElement */
+        const reasonElement = testElement.querySelector('.reason');
+        if (data instanceof HTMLElement) {
+          reasonElement.appendChild(data);
+        } else if (data) {
+          reasonElement.innerText = `${data}`;
+        } else {
+          reasonElement.classList.add('hidden');
+        }
+      }
+
+      window.addEventListener('load', async () => {
+        await run(tests, logResult);
+        document.querySelector('.spinnerContainer').remove();
+      });
+    </script>
+
+    <link
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700&family=Roboto+Mono&display=swap"
+      rel="stylesheet" />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons+Round"
+      rel="stylesheet" />
+    <link rel="stylesheet" type="text/css" href="tests.css" />
+  </head>
+  <body>
+    <h1>Unit tests</h1>
+    <div><i>See the console for stack traces.</i></div>
+    <div>
+      <div class="suiteContainer">
+        <div class="suite template">
+          <div class="suiteName"></div>
+          <div class="testContainer">
+            <div class="test template">
+              <div class="testName"></div>
+              <div class="reason"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="spinnerContainer">
+        <span class="material-icons-round spinner">science</span>
+      </div>
+    </div>
+  </body>
+</html>

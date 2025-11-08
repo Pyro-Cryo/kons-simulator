@@ -1,25 +1,25 @@
 type TestName = `test${string}`;
 type Verdict = 'pass' | 'fail' | 'skip';
 
-interface PassResult<T = undefined> {
+export interface PassResult<T = undefined> {
   suite: string;
   test: string;
   verdict: 'pass';
   data: T;
 }
 
-interface FailResult {
+export interface FailResult {
   suite: string;
   test: string;
   verdict: 'fail';
   reason: Error;
 }
 
-interface SkipResult {
+export interface SkipResult {
   suite: string;
   test: string;
   verdict: 'skip';
-  reason: Error | string;
+  reason: string;
 }
 
 export type Result<T = unknown> = PassResult<T> | FailResult | SkipResult;
@@ -28,7 +28,7 @@ export class Suite {
   setUp?(): void;
   tearDown?(): void;
   tearDownClass?(): void;
-  [testName: TestName]: (() => void) | (() => Promise<unknown>);
+  [testName: TestName]: (() => unknown) | (() => Promise<unknown>);
 }
 
 class AssertionError extends Error {}
