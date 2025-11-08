@@ -19,7 +19,7 @@ export class Testing extends Suite {
     const results = await run(
       class FailingSuite extends Suite {
         testShouldFail() {
-          throw new Error("My message");
+          throw new Error('My message');
         }
       }
     );
@@ -30,7 +30,7 @@ export class Testing extends Suite {
     assert(result.test === 'testShouldFail');
     assert(result.verdict === 'fail');
     assert(result.reason instanceof Error);
-    assert(result.reason.message === "My message");
+    assert(result.reason.message === 'My message');
   }
 
   async testRunsSetupAndTeardownInCorrectOrder() {
@@ -40,23 +40,23 @@ export class Testing extends Suite {
       class PassingSuite extends Suite {
         constructor() {
           super();
-          checkpoints.push("constructor");
+          checkpoints.push('constructor');
         }
         setUp() {
-          checkpoints.push("setUp");
+          checkpoints.push('setUp');
         }
         tearDown() {
-          checkpoints.push("tearDown");
+          checkpoints.push('tearDown');
         }
         tearDownClass() {
-          checkpoints.push("tearDownClass");
+          checkpoints.push('tearDownClass');
         }
 
         testShouldRunFirst() {
-          checkpoints.push("testShouldRunFirst");
+          checkpoints.push('testShouldRunFirst');
         }
         testShouldRunSecond() {
-          checkpoints.push("testShouldRunSecond");
+          checkpoints.push('testShouldRunSecond');
         }
       }
     );
@@ -99,7 +99,7 @@ export class Testing extends Suite {
       class BuggySuite extends Suite {
         constructor() {
           super();
-          throw new Error("My message");
+          throw new Error('My message');
         }
         testShouldBeSkipped() {
           throw new Error("Didn't skip");
@@ -113,7 +113,7 @@ export class Testing extends Suite {
     assert(result.test === 'constructor');
     assert(result.verdict === 'fail');
     assert(result.reason instanceof Error);
-    assert(result.reason.message === "My message");
+    assert(result.reason.message === 'My message');
   }
 
   async testFailureInTearDownClassReturnsFailResult() {
@@ -121,7 +121,7 @@ export class Testing extends Suite {
       class BuggySuite extends Suite {
         testShouldPass() {}
         tearDownClass() {
-          throw new Error("My message");
+          throw new Error('My message');
         }
       }
     );
@@ -129,13 +129,13 @@ export class Testing extends Suite {
     // Extra test result for the suite itself.
     assert(results.length === 2);
 
-    const [failResult] = results.filter(result => result.verdict === "fail");
+    const [failResult] = results.filter((result) => result.verdict === 'fail');
     assert(failResult.suite === 'BuggySuite');
     assert(failResult.test === 'constructor [tearDown]');
     assert(failResult.reason instanceof Error);
-    assert(failResult.reason.message === "My message");
+    assert(failResult.reason.message === 'My message');
 
-    const [passResult] = results.filter(result => result.verdict === "pass");
+    const [passResult] = results.filter((result) => result.verdict === 'pass');
     assert(passResult.suite === 'BuggySuite');
     assert(passResult.test === 'testShouldPass');
   }
@@ -144,10 +144,10 @@ export class Testing extends Suite {
     const results = await run(
       class BuggySuite extends Suite {
         setUp() {
-          throw new Error("My message");
+          throw new Error('My message');
         }
         testFailsSetup() {
-          throw new Error("Should not reach this");
+          throw new Error('Should not reach this');
         }
       }
     );
@@ -158,7 +158,7 @@ export class Testing extends Suite {
     assert(result.test === 'testFailsSetup [setUp]');
     assert(result.verdict === 'fail');
     assert(result.reason instanceof Error);
-    assert(result.reason.message === "My message");
+    assert(result.reason.message === 'My message');
   }
 
   async testFailureInTeardownReturnsFailResult() {
@@ -166,7 +166,7 @@ export class Testing extends Suite {
       class BuggySuite extends Suite {
         testFailsTeardown() {}
         tearDown() {
-          throw new Error("My message");
+          throw new Error('My message');
         }
       }
     );
@@ -177,20 +177,20 @@ export class Testing extends Suite {
     assert(result.test === 'testFailsTeardown [tearDown]');
     assert(result.verdict === 'fail');
     assert(result.reason instanceof Error);
-    assert(result.reason.message === "My message");
+    assert(result.reason.message === 'My message');
   }
 
   async testPassingTestStoresReturnedDataInResult() {
-    const [result] = await run(
+    const [result] = (await run(
       class PassingSuite extends Suite {
         testShouldPass(): {key: string} {
-          return {key: "value"};
+          return {key: 'value'};
         }
       }
-    ) as PassResult<{key: string}>[];
+    )) as PassResult<{key: string}>[];
 
-    assert("key" in result.data);
-    assert(result.data.key === "value");
+    assert('key' in result.data);
+    assert(result.data.key === 'value');
   }
 
   async testIgnoresHelperFunctionsWithoutTestPrefix() {
@@ -204,6 +204,25 @@ export class Testing extends Suite {
     );
 
     assert(results.length === 1);
-    assert(results[0].test === "testShouldPass");
+    assert(results[0].test === 'testShouldPass');
+  }
+
+  // Yes, this more or less tests itself...
+  async testHandlesAsyncTests() {
+    const results = await run(
+      class SuiteWithHelper extends Suite {
+        async testShouldPass(): Promise<number> {
+          await new Promise(resolve => setTimeout(resolve, 1));
+          return 123;
+        }
+        myHelper() {}
+      }
+    );
+
+    assert(results.length === 1);
+    const [result] = results as PassResult[];
+    assert(result.test === 'testShouldPass');
+    assert(result.verdict === 'pass');
+    assert(result.data === 123);
   }
 }
