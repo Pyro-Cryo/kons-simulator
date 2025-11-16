@@ -67,7 +67,7 @@ export class LinkedList<T> {
   }
 
   /**
-   * Removes the first occurrence of an object from the list. Will iterate
+   * Removes the last occurrence of an object from the list. Will iterate
    * over the entire list in the worst case.
    * @param {T} obj
    * @returns true if the object was present in the list, and false otherwise.

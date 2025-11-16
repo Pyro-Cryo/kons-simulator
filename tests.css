@@ -1,0 +1,67 @@
+body {
+  font-family: Nunito, sans-serif;
+  padding: 0 16px;
+}
+.template {
+  display: none !important;
+}
+.hidden {
+  display: none !important;
+}
+
+.suiteContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-top: 16px;
+}
+.suiteName {
+  font-weight: bold;
+  font-size: larger;
+  padding-bottom: 8px;
+}
+
+.testContainer {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+.test {
+  padding: 16px;
+  border-radius: 8px;
+}
+.testName {
+  font-weight: bold;
+}
+.reason {
+  max-width: 400px;
+  max-height: 200px;
+  overflow: auto;
+}
+
+.pass {
+  background-color: green;
+}
+.fail {
+  background-color: red;
+}
+.skip {
+  background-color: grey;
+}
+
+.spinnerContainer {
+  text-align: center;
+}
+.spinner {
+  animation: 1s linear infinite forwards spin;
+  color: #444;
+}
+@keyframes spin {
+  from {
+    rotate: 0;
+  }
+  to {
+    rotate: 360deg;
+  }
+}
