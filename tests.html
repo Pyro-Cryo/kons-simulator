@@ -6,12 +6,16 @@
     <script type="module" src="out/engine/tests/testing.js"></script>
     <script type="module">
       import {run, logResults} from './out/engine/testing.js';
-      import {Testing} from './out/engine/tests/testing.js';
-      const tests = [Testing];
+      import {AssertionsSuite} from './out/engine/tests/assertions.js';
+      import {TestingSuite} from './out/engine/tests/testing.js';
+      import {LinkedListSuite} from './out/engine/tests/containers.js';
+      const tests = [AssertionsSuite, TestingSuite, LinkedListSuite];
 
       function prettyName(name) {
         if (name.startsWith('test')) {
           name = name.substring('test'.length);
+        } else if (name.endsWith('Suite')) {
+          name = name.substring(0, name.length - 'Suite'.length);
         }
         return name.replace(
           /(?!^)([A-Z])/g,

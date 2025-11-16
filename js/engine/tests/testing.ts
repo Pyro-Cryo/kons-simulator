@@ -1,6 +1,7 @@
-import {Suite, run, assert, FailResult, PassResult} from './../testing.js';
+import {assert, assertSequenceEqual, assertThrows} from '../assertions.js';
+import {Suite, run, PassResult, FailResult, parameters} from '../testing.js';
 
-export class Testing extends Suite {
+export class TestingSuite extends Suite {
   async testPassingTestReturnsPassResult() {
     const results = await run(
       class PassingSuite extends Suite {
@@ -72,7 +73,7 @@ export class Testing extends Suite {
       'tearDownClass',
     ];
     assert(results.length === 2);
-    assert(JSON.stringify(checkpoints) === JSON.stringify(expected));
+    assertSequenceEqual(checkpoints, expected);
   }
 
   async testTestFunctionsCanReferenceInstanceVariables() {
@@ -212,7 +213,7 @@ export class Testing extends Suite {
     const results = await run(
       class SuiteWithHelper extends Suite {
         async testShouldPass(): Promise<number> {
-          await new Promise(resolve => setTimeout(resolve, 1));
+          await new Promise((resolve) => setTimeout(resolve, 1));
           return 123;
         }
         myHelper() {}
@@ -224,5 +225,80 @@ export class Testing extends Suite {
     assert(result.test === 'testShouldPass');
     assert(result.verdict === 'pass');
     assert(result.data === 123);
+  }
+
+  async testParametersCreatesOneTestPerParameterSet() {
+    const results = await run(
+      class SuiteWithParameterizedTest extends Suite {
+        @parameters([5, false], [1, true], [2, true])
+        testIsEven(x: number, expectEven: boolean) {
+          assert(!(x % 2) === expectEven);
+        }
+      }
+    );
+
+    assert(results.length === 3);
+    assert(results.every((result) => result.test.startsWith('testIsEven')));
+    assert(results.filter(result => result.verdict === "pass").length === 2);
+    assert(results.filter(result => result.verdict === "fail").length === 1);
+  }
+
+  async testParametersBindsThisCorrectlyAndRunsSetupBetweenTests() {
+    const results = await run(
+      class SuiteWithParameterizedTest extends Suite {
+        x: number = 1;
+        setUp() {
+          this.x = 15;
+        }
+
+        @parameters([5], [3])
+        testIsDivisible(y: number) {
+          assert(this.x === 15);
+          this.x /= y;
+          assert(this.x % 1 === 0);
+        }
+      }
+    );
+
+    assert(results.length === 2);
+    assert(results.every((result) => result.verdict === "pass"));
+  }
+
+  async testParametersCanParameterizeMultipleTests() {
+    const results = await run(
+      class SuiteWithParameterizedTest extends Suite {
+        @parameters([5, 5], [3, 3])
+        testIsEqual(x: number, y: number) {
+          assert(x === y);
+        }
+
+        @parameters([0], [false], [""])
+        testIsFalsy(x: unknown) {
+          assert(!x);
+        }
+      }
+    );
+
+    assert(results.length === 5);
+    assert(results.every((result) => result.verdict === "pass"));
+    assert(
+      results.filter((r) => r.test.startsWith('testIsEqual')).length === 2
+    );
+    assert(
+      results.filter((r) => r.test.startsWith('testIsFalsy')).length === 3
+    );
+  }
+
+  async testParametersErrorOnDecoratingNonTestMethod() {
+    assertThrows(
+      () =>
+        class SuiteWithParameterizedTest extends Suite {
+          // Method does not begin with "test".
+          @parameters([5, 5], [3, 3])
+          helper(x: number, y: number): number {
+            return x * y;
+          }
+        }
+    );
   }
 }

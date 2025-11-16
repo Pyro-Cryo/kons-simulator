@@ -1,5 +1,6 @@
 type TestName = `test${string}`;
 type Verdict = 'pass' | 'fail' | 'skip';
+const PARAMETERIZED_TESTS = Symbol('PARAMETERIZED_TESTS');
 
 export interface PassResult<T = undefined> {
   suite: string;
@@ -28,17 +29,12 @@ export class Suite {
   setUp?(): void;
   tearDown?(): void;
   tearDownClass?(): void;
-  [testName: TestName]: (() => unknown) | (() => Promise<unknown>);
+  [testName: TestName]:
+    | ((...args: never[]) => unknown)
+    | ((...args: never[]) => Promise<unknown>);
 }
 
-class AssertionError extends Error {}
-
-export function assert(value: unknown, message?: string | (() => string)) {
-  if (!value) {
-    message ??= 'Assertion failed';
-    throw new AssertionError(typeof message === 'string' ? message : message());
-  }
-}
+type SuiteWithParameterizedTests = Suite & {[PARAMETERIZED_TESTS]: Set<string>};
 
 function wrapLogResult(logResult?: (result: Result) => void) {
   if (!logResult) {
@@ -55,16 +51,27 @@ function wrapLogResult(logResult?: (result: Result) => void) {
 }
 
 function getTestNames(suite: Suite, suiteName: string): TestName[] {
-  const matchingKeys = Object.getOwnPropertyNames(
-    Object.getPrototypeOf(suite)
-  ).filter((key) => key.startsWith('test')) as TestName[];
+  const matchingKeys = Object.getOwnPropertyNames(Object.getPrototypeOf(suite))
+    .concat(Object.keys(suite))
+    .filter((key) => key.startsWith('test')) as TestName[];
+  const parameterizedTests =
+    (suite as Partial<SuiteWithParameterizedTests>)[PARAMETERIZED_TESTS];
 
   return matchingKeys.filter((key) => {
-    const isFunction = suite[key] instanceof Function;
-    if (!isFunction) {
-      console.warn(`Not a test function: ${suiteName}.${key}`);
+    if (parameterizedTests?.has(key)) {
+      return false;
     }
-    return isFunction;
+    if (!(suite[key] instanceof Function)) {
+      console.warn(`Not a test function: ${suiteName}.${key}`);
+      return false;
+    }
+    if (suite[key].length !== 0) {
+      // The method takes arguments.
+      console.warn(
+        `Parameterized test function without decorator: ${suiteName}.${key}`
+      );
+    }
+    return true;
   });
 }
 
@@ -249,4 +256,43 @@ export function logResults(
       }
     });
   });
+}
+
+// https://devblogs.microsoft.com/typescript/announcing-typescript-5-0/#writing-well-typed-decorators
+export function parameters<
+  This extends Suite,
+  T extends (...args: never[]) => void
+>(
+  ...args: Parameters<T>[]
+): (
+  func: T,
+  context: ClassMethodDecoratorContext<
+    This,
+    (this: This, ...args: Parameters<T>) => void
+  >
+) => void {
+  return (
+    func: T,
+    context: ClassMethodDecoratorContext<
+      This,
+      (this: This, ...args: Parameters<T>) => void
+    >
+  ) => {
+    const name = context.name;
+    if (typeof name !== 'string' || !name.startsWith('test')) {
+      throw new Error(
+        `@parameters() can only be used on test methods, got: ${String(name)}`
+      );
+    }
+    context.addInitializer(function () {
+      const suite = this as unknown as SuiteWithParameterizedTests;
+      // Add each parameterized variant as a separate test.
+      args.forEach((params, i) => {
+        suite[`${name as TestName} (${i})`] = func.bind(suite, ...params);
+      });
+      // Flag original function definition to ignore it.
+      suite[PARAMETERIZED_TESTS] ??= new Set();
+      suite[PARAMETERIZED_TESTS].add(name);
+    });
+  };
 }
