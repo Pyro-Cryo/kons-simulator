@@ -263,6 +263,18 @@ class NumberSubject extends SubjectBase<number> {
   }
 }
 
+// TODO: Lägg till startsWith/endsWith, hasLength, ev. annat
+class StringSubject extends SubjectBase<string> {
+  contains(expected: string) {
+    this.evaluate(
+      this.value.indexOf(expected) !== -1,
+      'Expected value to contain "{expected}", got: {value}',
+      'Expected value not to contain "{expected}", got: {value}',
+      {expected}
+    );
+  }
+}
+
 class IterableSubject<T> extends SubjectBase<Iterable<T>> {
   private equality?: (a: T, b: T) => boolean;
 
@@ -472,6 +484,7 @@ class MappingSubject<V, K = string> extends SubjectBase<MappingLike<V, K>> {
 }
 
 export function assertThat(value: number): NumberSubject;
+export function assertThat(value: string): StringSubject;
 export function assertThat<T>(value: Iterable<T>): IterableSubject<T>;
 export function assertThat<V, K = string>(
   value: MappingLike<V, K>
@@ -483,8 +496,14 @@ export function assertThat<
   >
 >(value: T): SubjectBase<T>;
 export function assertThat(value: unknown): SubjectBase<unknown> {
+  if (value === null || value === undefined) {
+    return new SubjectBase(value);
+  }
   if (typeof value === 'number') {
     return new NumberSubject(value);
+  }
+  if (typeof value === "string") {
+    return new StringSubject(value);
   }
   if (
     value instanceof Map ||
