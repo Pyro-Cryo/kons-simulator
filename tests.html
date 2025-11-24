@@ -2,9 +2,8 @@
 <html>
   <head>
     <title>Unit tests</title>
-    <script type="module" src="out/engine/testing.js"></script>
-    <script type="module" src="out/engine/tests/testing.js"></script>
     <script type="module">
+      import {onUnusedSubject} from './out/engine/assertions.js';
       import {run, logResults} from './out/engine/testing.js';
       import {AssertionsSuite} from './out/engine/tests/assertions.js';
       import {TestingSuite} from './out/engine/tests/testing.js';
@@ -38,12 +37,14 @@
         }
 
         const testTemplate = suiteElement.querySelector('.template');
+        /** @type HTMLDivElement */
         const testElement = testTemplate.cloneNode(true);
         testElement.classList.remove('template');
         testElement.classList.add(result.verdict);
         testElement.querySelector('.testName').innerText = prettyName(
           result.test
         );
+        testElement.dataset.testName = result.test;
         testTemplate.parentElement.appendChild(testElement);
 
         const data = result.data ?? result.reason;
@@ -58,7 +59,28 @@
         }
       }
 
+      /** @param {{suite: string, test: string}} context */
+      function addWarning(context) {
+        console.warn(
+          `Unfinished (no-op) assertThat() in ${context.suite}.${context.test}.`
+        );
+        const testElement = document.querySelector(
+          `.suite#${context.suite} [data-test-name="${context.test}"]`
+        );
+        /** @type HTMLDivElement | null */
+        const warningsElement = testElement?.querySelector(".warnings")
+        if (!warningsElement) {
+          return;
+        }
+
+        const warning = document.createElement("div");
+        warning.innerText = "Test contains unfinished assertThat()";
+        warningsElement.appendChild(warning);
+        warningsElement.classList.remove("hidden");
+      }
+
       window.addEventListener('load', async () => {
+        onUnusedSubject(addWarning);
         await run(tests, logResult);
         document.querySelector('.spinnerContainer').remove();
       });
@@ -83,6 +105,7 @@
             <div class="test template">
               <div class="testName"></div>
               <div class="reason"></div>
+              <div class="warnings hidden"></div>
             </div>
           </div>
         </div>

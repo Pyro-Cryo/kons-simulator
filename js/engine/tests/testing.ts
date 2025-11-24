@@ -1,4 +1,4 @@
-import {assert, assertSequenceEqual, assertThrows} from '../assertions.js';
+import {assertThat, assertThrows} from '../assertions.js';
 import {Suite, run, PassResult, FailResult, parameters} from '../testing.js';
 
 export class TestingSuite extends Suite {
@@ -9,11 +9,11 @@ export class TestingSuite extends Suite {
       }
     );
 
-    assert(results.length === 1);
+    assertThat(results).hasLength(1);
     const [result] = results;
-    assert(result.suite === 'PassingSuite');
-    assert(result.test === 'testShouldPass');
-    assert(result.verdict === 'pass');
+    assertThat(result.suite).equals('PassingSuite');
+    assertThat(result.test).equals('testShouldPass');
+    assertThat(result.verdict).equals('pass');
   }
 
   async testFailingTestReturnsFailResult() {
@@ -25,13 +25,13 @@ export class TestingSuite extends Suite {
       }
     );
 
-    assert(results.length === 1);
+    assertThat(results).hasLength(1);
     const [result] = results as FailResult[];
-    assert(result.suite === 'FailingSuite');
-    assert(result.test === 'testShouldFail');
-    assert(result.verdict === 'fail');
-    assert(result.reason instanceof Error);
-    assert(result.reason.message === 'My message');
+    assertThat(result.suite).equals('FailingSuite');
+    assertThat(result.test).equals('testShouldFail');
+    assertThat(result.verdict).equals('fail');
+    assertThat(result.reason).isInstanceOf(Error);
+    assertThat(result.reason.message).equals('My message');
   }
 
   async testRunsSetupAndTeardownInCorrectOrder() {
@@ -72,8 +72,8 @@ export class TestingSuite extends Suite {
       'tearDown',
       'tearDownClass',
     ];
-    assert(results.length === 2);
-    assertSequenceEqual(checkpoints, expected);
+    assertThat(results).hasLength(2);
+    assertThat(checkpoints).sequenceEquals(expected);
   }
 
   async testTestFunctionsCanReferenceInstanceVariables() {
@@ -86,13 +86,13 @@ export class TestingSuite extends Suite {
           this.y = this.x * 2;
         }
         testShouldPass() {
-          assert(this.x === 5);
-          assert(this.y === 10);
+          assertThat(this.x).equals(5);
+          assertThat(this.y).equals(10);
         }
       }
     );
 
-    assert(result.verdict === 'pass');
+    assertThat(result.verdict).equals('pass');
   }
 
   async testFailureInSuiteConstructorReturnsFailResult() {
@@ -108,13 +108,13 @@ export class TestingSuite extends Suite {
       }
     );
 
-    assert(results.length === 1);
+    assertThat(results).hasLength(1);
     const [result] = results as FailResult[];
-    assert(result.suite === 'BuggySuite');
-    assert(result.test === 'constructor');
-    assert(result.verdict === 'fail');
-    assert(result.reason instanceof Error);
-    assert(result.reason.message === 'My message');
+    assertThat(result.suite).equals('BuggySuite');
+    assertThat(result.test).equals('constructor');
+    assertThat(result.verdict).equals('fail');
+    assertThat(result.reason).isInstanceOf(Error);
+    assertThat(result.reason.message).equals('My message');
   }
 
   async testFailureInTearDownClassReturnsFailResult() {
@@ -128,17 +128,17 @@ export class TestingSuite extends Suite {
     );
 
     // Extra test result for the suite itself.
-    assert(results.length === 2);
+    assertThat(results).hasLength(2);
 
     const [failResult] = results.filter((result) => result.verdict === 'fail');
-    assert(failResult.suite === 'BuggySuite');
-    assert(failResult.test === 'constructor [tearDown]');
-    assert(failResult.reason instanceof Error);
-    assert(failResult.reason.message === 'My message');
+    assertThat(failResult.suite).equals('BuggySuite');
+    assertThat(failResult.test).equals('constructor [tearDown]');
+    assertThat(failResult.reason).isInstanceOf(Error);
+    assertThat(failResult.reason.message).equals('My message');
 
     const [passResult] = results.filter((result) => result.verdict === 'pass');
-    assert(passResult.suite === 'BuggySuite');
-    assert(passResult.test === 'testShouldPass');
+    assertThat(passResult.suite).equals('BuggySuite');
+    assertThat(passResult.test).equals('testShouldPass');
   }
 
   async testFailureInSetupReturnsFailResult() {
@@ -153,13 +153,13 @@ export class TestingSuite extends Suite {
       }
     );
 
-    assert(results.length === 1);
+    assertThat(results).hasLength(1);
     const [result] = results as FailResult[];
-    assert(result.suite === 'BuggySuite');
-    assert(result.test === 'testFailsSetup [setUp]');
-    assert(result.verdict === 'fail');
-    assert(result.reason instanceof Error);
-    assert(result.reason.message === 'My message');
+    assertThat(result.suite).equals('BuggySuite');
+    assertThat(result.test).equals('testFailsSetup [setUp]');
+    assertThat(result.verdict).equals('fail');
+    assertThat(result.reason).isInstanceOf(Error);
+    assertThat(result.reason.message).equals('My message');
   }
 
   async testFailureInTeardownReturnsFailResult() {
@@ -172,13 +172,13 @@ export class TestingSuite extends Suite {
       }
     );
 
-    assert(results.length === 1);
+    assertThat(results).hasLength(1);
     const [result] = results as FailResult[];
-    assert(result.suite === 'BuggySuite');
-    assert(result.test === 'testFailsTeardown [tearDown]');
-    assert(result.verdict === 'fail');
-    assert(result.reason instanceof Error);
-    assert(result.reason.message === 'My message');
+    assertThat(result.suite).equals('BuggySuite');
+    assertThat(result.test).equals('testFailsTeardown [tearDown]');
+    assertThat(result.verdict).equals('fail');
+    assertThat(result.reason).isInstanceOf(Error);
+    assertThat(result.reason.message).equals('My message');
   }
 
   async testPassingTestStoresReturnedDataInResult() {
@@ -190,8 +190,9 @@ export class TestingSuite extends Suite {
       }
     )) as PassResult<{key: string}>[];
 
-    assert('key' in result.data);
-    assert(result.data.key === 'value');
+    // TODO: Add contains, containsKey, containsValue
+    assertThat('key' in result.data).isTruthy();
+    assertThat(result.data.key).equals('value');
   }
 
   async testIgnoresHelperFunctionsWithoutTestPrefix() {
@@ -204,8 +205,8 @@ export class TestingSuite extends Suite {
       }
     );
 
-    assert(results.length === 1);
-    assert(results[0].test === 'testShouldPass');
+    assertThat(results).hasLength(1);
+    assertThat(results[0].test).equals('testShouldPass');
   }
 
   // Yes, this more or less tests itself...
@@ -220,11 +221,11 @@ export class TestingSuite extends Suite {
       }
     );
 
-    assert(results.length === 1);
-    const [result] = results as PassResult[];
-    assert(result.test === 'testShouldPass');
-    assert(result.verdict === 'pass');
-    assert(result.data === 123);
+    assertThat(results).hasLength(1);
+    const [result] = results as PassResult<number>[];
+    assertThat(result.test).equals('testShouldPass');
+    assertThat(result.verdict).equals('pass');
+    assertThat(result.data).equals(123);
   }
 
   async testParametersCreatesOneTestPerParameterSet() {
@@ -232,15 +233,17 @@ export class TestingSuite extends Suite {
       class SuiteWithParameterizedTest extends Suite {
         @parameters([5, false], [1, true], [2, true])
         testIsEven(x: number, expectEven: boolean) {
-          assert(!(x % 2) === expectEven);
+          assertThat(!(x % 2)).equals(expectEven);
         }
       }
     );
 
-    assert(results.length === 3);
-    assert(results.every((result) => result.test.startsWith('testIsEven')));
-    assert(results.filter(result => result.verdict === "pass").length === 2);
-    assert(results.filter(result => result.verdict === "fail").length === 1);
+    assertThat(results).hasLength(3);
+    assertThat(
+      results.every((r) => r.test.startsWith('testIsEven'))
+    ).isTruthy();
+    assertThat(results.filter((r) => r.verdict === 'pass')).hasLength(2);
+    assertThat(results.filter((r) => r.verdict === 'fail')).hasLength(1);
   }
 
   async testParametersBindsThisCorrectlyAndRunsSetupBetweenTests() {
@@ -253,15 +256,15 @@ export class TestingSuite extends Suite {
 
         @parameters([5], [3])
         testIsDivisible(y: number) {
-          assert(this.x === 15);
+          assertThat(this.x).equals(15);
           this.x /= y;
-          assert(this.x % 1 === 0);
+          assertThat(this.x % 1).equals(0);
         }
       }
     );
 
-    assert(results.length === 2);
-    assert(results.every((result) => result.verdict === "pass"));
+    assertThat(results).hasLength(2);
+    assertThat(results.every((result) => result.verdict === 'pass')).isTruthy();
   }
 
   async testParametersCanParameterizeMultipleTests() {
@@ -269,24 +272,24 @@ export class TestingSuite extends Suite {
       class SuiteWithParameterizedTest extends Suite {
         @parameters([5, 5], [3, 3])
         testIsEqual(x: number, y: number) {
-          assert(x === y);
+          assertThat(x).equals(y);
         }
 
-        @parameters([0], [false], [""])
+        @parameters([0], [false], [''])
         testIsFalsy(x: unknown) {
-          assert(!x);
+          assertThat(x).not.isTruthy();
         }
       }
     );
 
-    assert(results.length === 5);
-    assert(results.every((result) => result.verdict === "pass"));
-    assert(
-      results.filter((r) => r.test.startsWith('testIsEqual')).length === 2
-    );
-    assert(
-      results.filter((r) => r.test.startsWith('testIsFalsy')).length === 3
-    );
+    assertThat(results).hasLength(5);
+    assertThat(results.every((result) => result.verdict === 'pass')).isTruthy();
+    assertThat(
+      results.filter((r) => r.test.startsWith('testIsEqual'))
+    ).hasLength(2);
+    assertThat(
+      results.filter((r) => r.test.startsWith('testIsFalsy'))
+    ).hasLength(3);
   }
 
   async testParametersErrorOnDecoratingNonTestMethod() {

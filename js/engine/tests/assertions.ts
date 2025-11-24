@@ -1,8 +1,7 @@
 import {
-  assert,
   assertThrows,
-  assertSequenceEqual,
   AssertionError,
+  assertThat,
 } from '../assertions.js';
 import {Suite, parameters} from '../testing.js';
 
@@ -55,13 +54,13 @@ export class AssertionsSuite extends Suite {
     }
   }
 
-  testAssertDoesNotRaiseOnTrue() {
-    assert(true);
-  }
+  // testAssertDoesNotRaiseOnTrue() {
+  //   assert(true);
+  // }
 
-  testAssertRaisesOnFalse() {
-    assertThrows(() => assert(false), AssertionError);
-  }
+  // testAssertRaisesOnFalse() {
+  //   assertThrows(() => assert(false), AssertionError);
+  // }
 
   @parameters(
     [[], []],
@@ -79,11 +78,11 @@ export class AssertionsSuite extends Suite {
       [1, 2, 3],
     ]
   )
-  testAssertSequenceEqualAllowsEqualSequences(
+  testAssertSequenceEqualsAllowsEqualSequences(
     first: Iterable<unknown>,
     second: Iterable<unknown>
   ) {
-    assertSequenceEqual(first, second);
+    assertThat(first).sequenceEquals(second);
   }
 
   @parameters(
@@ -94,10 +93,10 @@ export class AssertionsSuite extends Suite {
     ],
     [[{}], [{}]]
   )
-  testAssertSequenceEqualDisallowsInequalSequences(
+  testAssertSequenceEqualsDisallowsInequalSequences(
     first: Iterable<unknown>,
     second: Iterable<unknown>
   ) {
-    assertThrows(() => assertSequenceEqual(first, second));
+    assertThrows(() => assertThat(first).sequenceEquals(second));
   }
 }
