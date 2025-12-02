@@ -314,8 +314,9 @@ class IterableSubject<T> extends SubjectBase<Iterable<T>> {
     }
     this.evaluate(
       length === 0,
-      'Expected empty iterable, got: {value}',
-      'Expected non-empty iterable, got: {value}'
+      'Expected empty iterable, got: {value} with length {length}',
+      'Expected non-empty iterable, got: {value}',
+      {length}
     );
   }
 

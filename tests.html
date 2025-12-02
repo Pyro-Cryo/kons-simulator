@@ -7,8 +7,17 @@
       import {run, logResults} from './out/engine/testing.js';
       import {AssertionsSuite} from './out/engine/tests/assertions.js';
       import {TestingSuite} from './out/engine/tests/testing.js';
-      import {LinkedListSuite} from './out/engine/tests/containers.js';
-      const tests = [AssertionsSuite, TestingSuite, LinkedListSuite];
+      import {
+        LinkedListSuite,
+        MinheapSuite,
+      } from './out/engine/tests/containers.js';
+
+      const tests = [
+        AssertionsSuite,
+        TestingSuite,
+        LinkedListSuite,
+        MinheapSuite,
+      ];
 
       function prettyName(name) {
         if (name.startsWith('test')) {
@@ -68,15 +77,15 @@
           `.suite#${context.suite} [data-test-name="${context.test}"]`
         );
         /** @type HTMLDivElement | null */
-        const warningsElement = testElement?.querySelector(".warnings")
+        const warningsElement = testElement?.querySelector('.warnings');
         if (!warningsElement) {
           return;
         }
 
-        const warning = document.createElement("div");
-        warning.innerText = "Test contains unfinished assertThat()";
+        const warning = document.createElement('div');
+        warning.innerText = 'Test contains unfinished assertThat()';
         warningsElement.appendChild(warning);
-        warningsElement.classList.remove("hidden");
+        warningsElement.classList.remove('hidden');
       }
 
       window.addEventListener('load', async () => {

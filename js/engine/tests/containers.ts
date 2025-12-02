@@ -1,6 +1,6 @@
 import {assertThat} from '../assertions.js';
 import {Suite} from '../testing.js';
-import {LinkedList} from '../containers.js';
+import {LinkedList, Minheap} from '../containers.js';
 
 export class LinkedListSuite extends Suite {
   testCanPushElement() {
@@ -73,5 +73,96 @@ export class LinkedListSuite extends Suite {
     list.push(undefined);
 
     assertThat(list).hasLength(5);
+    assertThat(list).sequenceEquals([1, 2, 3, null, undefined]);
+  }
+
+  testCanClear() {
+    const list = new LinkedList([1, 2, 3]);
+
+    list.clear();
+
+    assertThat(list).isEmpty();
+  }
+
+  testFilterIterateRemovesElements() {
+    const list = new LinkedList([1, 2, 3]);
+
+    assertThat(list.filterIterate(x => x % 2 === 1)).sequenceEquals([1, 3]);
+    assertThat(list).sequenceEquals([1, 3]);
+  }
+}
+
+export class MinheapSuite extends Suite {
+  testCorrectLength() {
+    const heap = new Minheap<string>();
+    heap.push("a", 1);
+    heap.push("b", 2);
+
+    assertThat(heap).hasLength(2);
+    assertThat(heap).not.isEmpty();
+  }
+
+  testCorrectIsEmpty() {
+    assertThat(new Minheap()).isEmpty();
+  }
+
+  testPeekReturnsElementWithLowestWeight() {
+    const heap = new Minheap<string>();
+    heap.push("a", 10);
+    heap.push("b", 1);
+    heap.push("c", 5);
+
+    assertThat(heap.peek()).equals("b");
+  }
+
+  testPeekWeightReturnsElementLowestWeight() {
+    const heap = new Minheap<string>();
+    heap.push("a", 10);
+    heap.push("b", 1);
+    heap.push("c", 5);
+
+    assertThat(heap.peekWeight()).equals(1);
+  }
+
+  testCanIterateOverElements() {
+    const heap = new Minheap<string>();
+    heap.push("a", 10);
+    heap.push("b", 1);
+    heap.push("c", 5);
+
+    assertThat(heap).setEquals(["a", "b", "c"]);
+  }
+
+  testCanContainDuplicates() {
+    const heap = new Minheap<string>();
+    heap.push("a", 10);
+    heap.push("a", 1);
+    heap.push("a", 5);
+
+    assertThat(heap).multisetEquals(["a", "a", "a"]);
+  }
+
+  testPopReturnsLowestElementAndUpdatesHeap() {
+    const heap = new Minheap<string>();
+    heap.push("a", 10);
+    heap.push("b", 1);
+    heap.push("c", 5);
+
+    assertThat(heap.pop()).equals("b");
+    assertThat(heap).hasLength(2);
+    assertThat(heap.peek()).equals("c");
+  }
+
+  testPushingAndPoppingElementSortsThem() {
+    const heap = new Minheap<string>();
+    heap.push("a", 10);
+    heap.push("b", 1);
+    heap.push("c", 5);
+    heap.push("d", -5);
+
+    const sorted = Array.from(new Array(heap.length), () => heap.pop());
+
+    assertThat(heap).isEmpty();
+    assertThat(sorted).sequenceEquals(["d", "b", "c", "a"]);
   }
 }
