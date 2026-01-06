@@ -190,8 +190,7 @@ export class TestingSuite extends Suite {
       }
     )) as PassResult<{key: string}>[];
 
-    // TODO: Add contains, containsKey, containsValue
-    assertThat('key' in result.data).isTruthy();
+    assertThat(result.data).containsKey('key');
     assertThat(result.data.key).equals('value');
   }
 
@@ -264,7 +263,7 @@ export class TestingSuite extends Suite {
     );
 
     assertThat(results).hasLength(2);
-    assertThat(results.every((result) => result.verdict === 'pass')).isTruthy();
+    assertThat(results).every((result) => result.verdict === 'pass');
   }
 
   async testParametersCanParameterizeMultipleTests() {
@@ -283,7 +282,7 @@ export class TestingSuite extends Suite {
     );
 
     assertThat(results).hasLength(5);
-    assertThat(results.every((result) => result.verdict === 'pass')).isTruthy();
+    assertThat(results).every((result) => result.verdict === 'pass');
     assertThat(
       results.filter((r) => r.test.startsWith('testIsEqual'))
     ).hasLength(2);
