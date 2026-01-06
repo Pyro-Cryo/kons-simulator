@@ -39,6 +39,9 @@ body {
   max-height: 200px;
   overflow: auto;
 }
+.warnings {
+  color: gold;
+}
 
 .pass {
   background-color: green;

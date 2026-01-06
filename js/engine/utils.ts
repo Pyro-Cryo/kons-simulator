@@ -63,15 +63,13 @@ export class InfiniteBag<T> {
 
   /** Peek at the next element in the bag without drawing. */
   peek(): T {
-    if (this.isEmpty())
-      throw new Error('Bag is empty, fill it first');
+    if (this.isEmpty()) throw new Error('Bag is empty, fill it first');
     return this.shuffledElements[this.shuffledElements.length - 1];
   }
 
   /** Draw the next element from the bag. */
   pop(): T {
-    if (this.isEmpty())
-      throw new Error('Bag is empty, fill it first');
+    if (this.isEmpty()) throw new Error('Bag is empty, fill it first');
     // If the bag is not empty, shuffledElements always contains at least one
     // element.
     const element = this.shuffledElements.pop()!;
@@ -80,4 +78,58 @@ export class InfiniteBag<T> {
     }
     return element;
   }
+}
+
+/**
+ * Returns a comma-separated string of the elements of the given array. If the
+ * array contains more than `max` elements, elements in the middle are omitted,
+ * and the number of omitted elements are written out.
+ */
+export function summarizeLongArray<T>(array: T[], max: number = 10): string {
+  let stringArray;
+  if (array.length <= max) {
+    stringArray = array.map(toString);
+  } else {
+    const numBefore = Math.max(0, Math.floor(max / 2));
+    stringArray = array
+      .slice(0, numBefore)
+      .map(toString)
+      .concat(
+        [`(${array.length - max + 1} omitted)`],
+        array.slice(array.length - (max - 1 - numBefore)).map(toString)
+      );
+  }
+  return stringArray.join(', ');
+}
+
+/** Converts the provided value to a reasonable string representation. */
+export function toString(value: unknown): string {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (value instanceof Array) {
+    return `[${summarizeLongArray(value, 11)}]`;
+  }
+
+  if (typeof value === 'object' && value !== null) {
+    if (
+      Object.getOwnPropertyNames(Object.getPrototypeOf(value)).indexOf(
+        'toString'
+      )
+    ) {
+      // Object defines its own string representation.
+      return String(value);
+    }
+    const typeName =
+      (value as {[Symbol.toStringTag]?: string})[Symbol.toStringTag] ??
+      (value as {constructor: {name: string}}).constructor.name;
+    const entries =
+      value instanceof Map
+        ? Array.from(value.entries())
+        : Object.entries(value);
+    return `${typeName}(${summarizeLongArray(entries, 9)})`;
+  }
+
+  return String(value);
 }

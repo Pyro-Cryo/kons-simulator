@@ -1,3 +1,5 @@
+import {setUnusedSubjectContext} from './assertions.js';
+
 type TestName = `test${string}`;
 type Verdict = 'pass' | 'fail' | 'skip';
 const PARAMETERIZED_TESTS = Symbol('PARAMETERIZED_TESTS');
@@ -24,6 +26,10 @@ export interface SkipResult {
 }
 
 export type Result<T = unknown> = PassResult<T> | FailResult | SkipResult;
+export interface UnusedSubjectContext {
+  suite: string;
+  test: string;
+}
 
 export class Suite {
   setUp?(): void;
@@ -54,8 +60,9 @@ function getTestNames(suite: Suite, suiteName: string): TestName[] {
   const matchingKeys = Object.getOwnPropertyNames(Object.getPrototypeOf(suite))
     .concat(Object.keys(suite))
     .filter((key) => key.startsWith('test')) as TestName[];
-  const parameterizedTests =
-    (suite as Partial<SuiteWithParameterizedTests>)[PARAMETERIZED_TESTS];
+  const parameterizedTests = (suite as Partial<SuiteWithParameterizedTests>)[
+    PARAMETERIZED_TESTS
+  ];
 
   return matchingKeys.filter((key) => {
     if (parameterizedTests?.has(key)) {
@@ -166,8 +173,14 @@ async function runSuite(
         suiteName,
         testName,
         suite[testName].bind(suite),
-        () => suite.setUp?.(),
-        () => suite.tearDown?.()
+        () => {
+          setUnusedSubjectContext({suite: suiteName, test: testName});
+          suite.setUp?.();
+        },
+        () => {
+          suite.tearDown?.();
+          setUnusedSubjectContext(null);
+        }
       )
   );
 

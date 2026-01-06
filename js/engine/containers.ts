@@ -137,7 +137,7 @@ export class LinkedList<T> {
         yield current.obj;
       } else {
         // `current` will be moved forward by the loop, so point it to the
-        // previous node and remove the current one. 
+        // previous node and remove the current one.
         const prev = current.prev;
         this.removeNode(current);
         current = prev ?? this.first;
@@ -156,7 +156,7 @@ export class LinkedList<T> {
 
 interface HeapNode<T> {
   obj: T;
-  weight: number;  
+  weight: number;
 }
 
 /**
