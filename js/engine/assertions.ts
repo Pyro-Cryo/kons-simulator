@@ -156,13 +156,12 @@ class SubjectBase<T> {
 
   isInstanceOf(
     type:
-      | (new (...args: unknown[]) => unknown)
+      | (new (...args: never[]) => unknown)
       | typeof String
       | typeof Number
       | typeof Symbol
       | typeof Function
       | typeof Object
-      | typeof Error
   ) {
     switch (type) {
       case String:
@@ -233,7 +232,7 @@ class NumberSubject extends SubjectBase<number> {
     );
   }
 
-  isGreaterEqual(expected: number) {
+  isAtLeast(expected: number) {
     this.evaluate(
       this.value >= expected,
       'Expected value to be greater than or equal to {expected}, got: {value}',
@@ -252,7 +251,7 @@ class NumberSubject extends SubjectBase<number> {
     );
   }
 
-  isLessEqual(expected: number) {
+  isAtMost(expected: number) {
     this.evaluate(
       this.value <= expected,
       'Expected value to be less than or equal to {expected}, got: {value}',
@@ -263,13 +262,39 @@ class NumberSubject extends SubjectBase<number> {
   }
 }
 
-// TODO: Lägg till startsWith/endsWith, hasLength, ev. annat
 class StringSubject extends SubjectBase<string> {
   contains(expected: string) {
     this.evaluate(
-      this.value.indexOf(expected) !== -1,
-      'Expected value to contain "{expected}", got: {value}',
-      'Expected value not to contain "{expected}", got: {value}',
+      this.value.includes(expected),
+      'Expected string to contain "{expected}", got: "{value}"',
+      'Expected string not to contain "{expected}", got: "{value}"',
+      {expected}
+    );
+  }
+
+  hasLength(expected: number) {
+    this.evaluate(
+      this.value.length === expected,
+      'Expected string of length {expected}, got: "{value}" (length: {length})',
+      'Expected string not to have length {expected}, got: "{value}"',
+      {expected, length: this.value.length}
+    );
+  }
+
+  startsWith(expected: string) {
+    this.evaluate(
+      this.value.startsWith(expected),
+      'Expected string to start with "{expected}", got: "{value}"',
+      'Expected string not to start with "{expected}", got: "{value}"',
+      {expected}
+    );
+  }
+
+  endsWith(expected: string) {
+    this.evaluate(
+      this.value.endsWith(expected),
+      'Expected string to end with "{expected}", got: "{value}"',
+      'Expected string not to end with "{expected}", got: "{value}"',
       {expected}
     );
   }
@@ -297,7 +322,8 @@ class IterableSubject<T> extends SubjectBase<Iterable<T>> {
 
     this.evaluate(
       length === expected,
-      'Expected iterable of length {expected}, got: {value} (length: {length})',
+      'Expected iterable of length {expected}, got: {value} with length ' +
+        '{length}',
       'Expected iterable of length other than {expected}, got: {value}',
       {expected, length}
     );
@@ -317,6 +343,73 @@ class IterableSubject<T> extends SubjectBase<Iterable<T>> {
       'Expected empty iterable, got: {value} with length {length}',
       'Expected non-empty iterable, got: {value}',
       {length}
+    );
+  }
+
+  contains(expected: T) {
+    const equality = this.equality ?? referenceEquals;
+
+    let currentIndex = 0;
+    let foundIndex = -1;
+    for (const element of this.value) {
+      if (equality(element, expected)) {
+        foundIndex = currentIndex;
+        break;
+      }
+      currentIndex++;
+    }
+
+    this.evaluate(
+      foundIndex !== -1,
+      'Expected iterable to contain {expected}, got: {value}',
+      'Expected iterable not to contain {expected}, but found it at index ' +
+        '{index}: {value}',
+      {expected, index: foundIndex}
+    );
+  }
+
+  every(predicate: (element: T) => boolean) {
+    let currentIndex = 0;
+    let failingIndex = -1;
+    let failingElement = null;
+    for (const element of this.value) {
+      if (!predicate(element)) {
+        failingIndex = currentIndex;
+        failingElement = element;
+        break;
+      }
+      currentIndex++;
+    }
+
+    this.evaluate(
+      failingIndex === -1,
+      'Expected every element to match the predicate, but the element ' +
+        'at index {index} does not: {element}',
+      'Expected some element not to match the predicate, but all elements ' +
+        'do: {value}',
+      {element: failingElement, index: failingIndex}
+    );
+  }
+
+  some(predicate: (element: T) => boolean) {
+    let currentIndex = 0;
+    let passingIndex = -1;
+    let passingElement = null;
+    for (const element of this.value) {
+      if (predicate(element)) {
+        passingIndex = currentIndex;
+        passingElement = element;
+        break;
+      }
+      currentIndex++;
+    }
+
+    this.evaluate(
+      passingIndex !== -1,
+      'Expected some element to match the predicate, no elements do: {value}',
+      'Expected no element to match the predicate, but the element at index ' +
+        '{index} does: {element}',
+      {element: passingElement, index: passingIndex}
     );
   }
 
@@ -380,8 +473,8 @@ class IterableSubject<T> extends SubjectBase<Iterable<T>> {
       difference.getCounts().length === 0,
       'Expected the same element counts in both multisets, got: {value} vs. ' +
         '{expected} (difference: {difference})',
-      'Expected multisets to differ, but they contain the same element ' +
-        'counts: {value}',
+      'Expected multisets to differ, but they have the same element counts: ' +
+        '{value}',
       {expected, difference}
     );
   }
@@ -438,7 +531,7 @@ class MappingSubject<V, K = string> extends SubjectBase<MappingLike<V, K>> {
     const size = getEntries(this.value).length;
     this.evaluate(
       size === expected,
-      'Expected mapping of size {expected}, got: {value} (size: {size})',
+      'Expected mapping of size {expected}, got: {value} with size {size}',
       'Expected mapping of size other than {expected}, got: {value}',
       {expected, size}
     );
@@ -448,9 +541,37 @@ class MappingSubject<V, K = string> extends SubjectBase<MappingLike<V, K>> {
     const size = getEntries(this.value).length;
     this.evaluate(
       size === 0,
-      'Expected empty mapping, got: {value} (size: {size})',
+      'Expected empty mapping, got: {value} with size {size}',
       'Expected non-empty mapping, got: {value}',
       {size}
+    );
+  }
+
+  containsKey(expected: K) {
+    const keyEquality = this.keyEquality ?? referenceEquals;
+    const index = getEntries(this.value).findIndex(([key, _]) =>
+      keyEquality(key, expected)
+    );
+    this.evaluate(
+      index !== -1,
+      'Expected mapping to contain the key {expected}, got: {value}',
+      'Expected mapping not to contain the key {expected}, but it does: ' +
+        '{value}',
+      {expected}
+    );
+  }
+
+  containsValue(expected: V) {
+    const valueEquality = this.valueEquality ?? referenceEquals;
+    const entry = getEntries(this.value).find(([_, value]) =>
+      valueEquality(value, expected)
+    );
+    this.evaluate(
+      entry !== undefined,
+      'Expected mapping to contain the value {expected}, got: {value}',
+      'Expected mapping not to contain the value {expected}, but it exists ' +
+        'under key {key}: {value}',
+      {expected, key: entry?.[0]}
     );
   }
 
@@ -503,7 +624,7 @@ export function assertThat(value: unknown): SubjectBase<unknown> {
   if (typeof value === 'number') {
     return new NumberSubject(value);
   }
-  if (typeof value === "string") {
+  if (typeof value === 'string') {
     return new StringSubject(value);
   }
   if (
