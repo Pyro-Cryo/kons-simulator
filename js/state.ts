@@ -61,10 +61,11 @@ export function registerEntities(
   }
 }
 
-const ROOT_PROTOTYPE = Object.getPrototypeOf(Object);
-
 function isEntityClass(object: unknown): object is EntityConstructor {
-  while (object !== ROOT_PROTOTYPE) {
+  if (typeof object !== "function") {
+    return false;
+  }
+  while (object !== null) {
     if (object === Entity) {
       return true;
     }
@@ -131,7 +132,7 @@ class BaseState {
    * @param variable The variable to get the patch for.
    * @returns The variable patch, or undefined if none exists.
    */
-  getVariablePatch<T extends {}>(variable: Var<T>): Partial<T> {
+  getVariablePatch<T extends object>(variable: Var<T>): Partial<T> {
     let patch = this.variables.get(variable.id) as Partial<T> | undefined;
     if (patch === undefined) {
       patch = {};
@@ -143,11 +144,11 @@ class BaseState {
   /**
    * Yields the variable patch from the current state, if one exists.
    * @param variable The variabe to get the patch for.
-   * @param _originalFirst Only relevant in the subclass.
+   * @param _ Only relevant in the subclass.
    */
-  *getVariablePatches<T extends {}>(
+  *getVariablePatches<T extends object>(
     variable: Var<T>,
-    _originalFirst: boolean = false
+    _: boolean = false
   ): Generator<Partial<T>, void, unknown> {
     const value = this.variables.get(variable.id);
     if (value !== undefined) {
@@ -336,7 +337,7 @@ class DerivedState extends BaseState {
    *     to iterate "backwards", i.e. yield the current state's patch before its
    *     original.
    */
-  override *getVariablePatches<T extends {}>(
+  override *getVariablePatches<T extends object>(
     variable: Var<T>,
     originalFirst: boolean = false
   ): Generator<Partial<T>, void, unknown> {
@@ -478,6 +479,7 @@ export class SetVar<T> {
     }
     return result;
   }
+  // TODO: Borde gå att implementera en hyfsat okej *iterate().
 }
 
 /** Only for use in tests. */

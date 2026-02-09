@@ -28,7 +28,7 @@ const PLAIN_OBJECT_KEY = '';
 
 interface SerializerWithKey {
   key: string;
-  serializer: (value: never) => Serializable;
+  serializer: (value: never) => unknown;
 }
 
 /**
@@ -41,9 +41,8 @@ export class JsonSerializer {
   private readonly deserializers = new Map<string, (value: never) => unknown>();
 
   constructor() {
-    // this.addSymbol(STORED_UNDEFINED);
     // Add undefined and symbol deserializers so we can skip some special cases
-    // in backwardOuterPass;
+    // in backwardOuterPass.
     this.deserializers.set(UNDEFINED_KEY, (_) => undefined);
     this.deserializers.set(SYMBOL_KEY, (description: string) =>
       this.deserializeSymbol(description)
@@ -81,12 +80,24 @@ export class JsonSerializer {
     this.symbols.set(symbol.description, symbol);
   }
 
-  private deserializeSymbol(description: string) {
+  private serializeSymbol(symbol: symbol) {
+    if (symbol.description === undefined) {
+      throw new Error(`Symbol without description: ${String(symbol)}`);
+    }
+    if (!this.symbols.has(symbol.description)) {
+      throw new Error(`Symbol not registered: ${String(symbol)}`);
+    }
+    return {[TYPE]: SYMBOL_KEY, [VALUE]: symbol.description};
+  }
+
+  private deserializeSymbol(description: string): symbol {
     if (!this.symbols.has(description)) {
       console.warn(`Deserializing unregistered symbol: ${description}`);
+      // Register the symbol so that all its occurences in the deserialized data
+      // will at least point to the same instance.
       this.addSymbol(Symbol(description));
     }
-    return this.symbols.get(description);
+    return this.symbols.get(description)!;
   }
 
   /**
@@ -99,7 +110,7 @@ export class JsonSerializer {
    * @param key The "key" used to disambiguate different types after they have
    *   been serialized. Defaults to the name of the Type. Must be unique.
    */
-  addClass<T extends Type, S extends Serializable>(
+  addClass<T extends Type, S>(
     type: T,
     serializer: (instance: InstanceType<T>) => S,
     deserializer: (serialized: S) => InstanceType<T>,
@@ -118,7 +129,6 @@ export class JsonSerializer {
     this.deserializers.set(key, deserializer);
   }
 
-  // Apply custom serializers, then proceed with inner pass.
   private forwardOuterPass(value: unknown): NativelySerializable {
     if (value === null) {
       return value;
@@ -129,8 +139,9 @@ export class JsonSerializer {
       case 'number':
         return value;
       case 'undefined':
+        return {[TYPE]: UNDEFINED_KEY};
       case 'symbol':
-        return this.forwardInnerPass(value);
+        return this.serializeSymbol(value);
       case 'function': // Could maybe be implemented similarly to objects.
       case 'bigint': // Can't be bothered.
         throw new Error(`Not supported: ${typeof value}`);
@@ -138,6 +149,17 @@ export class JsonSerializer {
     if (value instanceof Array) {
       // Process all elements in the array.
       return value.map((element: unknown) => this.forwardOuterPass(element));
+    }
+    if (value?.constructor === Object) {
+      if (TYPE in (value as object) || VALUE in (value as object)) {
+        throw new Error(
+          `Objects to serialize may not contain keys '${TYPE}' or '${VALUE}'`
+        );
+      }
+      // Recurse into all values. Symbol keys will be dropped.
+      return Object.fromEntries(
+        Object.entries(value).map(([k, v]) => [k, this.forwardOuterPass(v)])
+      );
     }
 
     const serializerWithKey = this.serializers.get(value?.constructor as Type);
@@ -148,40 +170,39 @@ export class JsonSerializer {
     }
 
     const {key, serializer} = serializerWithKey;
-    const serialized = this.forwardInnerPass(serializer(value as never));
+    const serialized = this.forwardOuterPass(serializer(value as never));
     if (
       typeof serialized === 'object' &&
       serialized !== null &&
       !(serialized instanceof Array)
     ) {
-      if (TYPE in serialized || VALUE in serialized) {
-        throw new Error(
-          `Serialized object may not contain keys ${TYPE} or ` + `${VALUE}`
-        );
-      }
       // Insert type information so it can be deserialized.
       serialized[TYPE] = key;
       return serialized;
     }
-    return {[TYPE]: key, [VALUE]: serialized};
+    // Primitives and arrays are wrapped to attach type information.
+    return {[TYPE]: key, [VALUE]: this.forwardOuterPass(serialized)};
   }
 
-  // Apply custom deserializers.
   private backwardOuterPass(value: NativelySerializable): unknown {
+    if (value === null || typeof value !== 'object') {
+      return value;
+    }
     if (value instanceof Array) {
       // Process all elements in the array.
       return value.map((element: NativelySerializable) =>
         this.backwardOuterPass(element)
       );
     }
-    if (value === null || typeof value !== 'object') {
-      return value;
-    }
-    if (!(TYPE in value)) {
-      throw new Error(`Serialized object missing ${TYPE} key`);
+
+    const key = value[TYPE] as string | undefined;
+    if (key === undefined) {
+      // Plain objects do not get a type key when serialized.
+      return Object.fromEntries(
+        Object.entries(value).map(([k, v]) => [k, this.backwardOuterPass(v)])
+      );
     }
 
-    const key = value[TYPE] as string;
     const deserializer = this.deserializers.get(key);
     if (deserializer === undefined) {
       throw new Error(`No deserializer for key ${key}`);
@@ -191,65 +212,65 @@ export class JsonSerializer {
     } else {
       delete value[TYPE];
     }
-    return deserializer(this.backwardInnerPass(value) as never);
+    return deserializer(this.backwardOuterPass(value) as never);
   }
 
   // Replace undefined and symbols.
-  private forwardInnerPass(value: Serializable): NativelySerializable {
-    if (value === undefined) {
-      return {[TYPE]: UNDEFINED_KEY};
-    }
-    if (typeof value === 'symbol') {
-      if (value.description === undefined) {
-        throw new Error(`Symbol without description: ${String(value)}`);
-      }
-      if (!this.symbols.has(value.description)) {
-        throw new Error(`Symbol not registered: ${String(value)}`);
-      }
-      return {[TYPE]: SYMBOL_KEY, [VALUE]: value.description};
-    }
-    if (value instanceof Array) {
-      return value.map((element: Serializable) =>
-        this.forwardInnerPass(element)
-      );
-    }
-    if (typeof value === 'object' && value !== null) {
-      return Object.fromEntries(
-        Object.entries(value).map(([key, value]) => [
-          key,
-          this.forwardInnerPass(value),
-        ])
-      );
-    }
-    return value;
-  }
+  // private forwardInnerPass(value: Serializable): NativelySerializable {
+  //   if (value === undefined) {
+  //     return {[TYPE]: UNDEFINED_KEY};
+  //   }
+  //   if (typeof value === 'symbol') {
+  //     if (value.description === undefined) {
+  //       throw new Error(`Symbol without description: ${String(value)}`);
+  //     }
+  //     if (!this.symbols.has(value.description)) {
+  //       throw new Error(`Symbol not registered: ${String(value)}`);
+  //     }
+  //     return {[TYPE]: SYMBOL_KEY, [VALUE]: value.description};
+  //   }
+  //   if (value instanceof Array) {
+  //     return value.map((element: Serializable) =>
+  //       this.forwardInnerPass(element)
+  //     );
+  //   }
+  //   if (typeof value === 'object' && value !== null) {
+  //     return Object.fromEntries(
+  //       Object.entries(value).map(([key, value]) => [
+  //         key,
+  //         this.forwardInnerPass(value),
+  //       ])
+  //     );
+  //   }
+  //   return value;
+  // }
 
   // Recreate undefined and symbols.
-  private backwardInnerPass(value: NativelySerializable): Serializable {
-    if (typeof value !== 'object' || value === null) {
-      return value;
-    }
-    if (value instanceof Array) {
-      return value.map((element: NativelySerializable) =>
-        this.backwardInnerPass(element)
-      );
-    }
+  // private backwardInnerPass(value: NativelySerializable): Serializable {
+  //   if (typeof value !== 'object' || value === null) {
+  //     return value;
+  //   }
+  //   if (value instanceof Array) {
+  //     return value.map((element: NativelySerializable) =>
+  //       this.backwardInnerPass(element)
+  //     );
+  //   }
 
-    switch (value[TYPE]) {
-      case UNDEFINED_KEY:
-        return undefined;
-      case SYMBOL_KEY:
-        return this.deserializers.get(SYMBOL_KEY)!(
-          value[VALUE] as never
-        ) as symbol;
-    }
-    return Object.fromEntries(
-      Object.entries(value).map(([key, value]) => [
-        key,
-        this.backwardInnerPass(value),
-      ])
-    );
-  }
+  //   switch (value[TYPE]) {
+  //     case UNDEFINED_KEY:
+  //       return undefined;
+  //     case SYMBOL_KEY:
+  //       return this.deserializers.get(SYMBOL_KEY)!(
+  //         value[VALUE] as never
+  //       ) as symbol;
+  //   }
+  //   return Object.fromEntries(
+  //     Object.entries(value).map(([key, value]) => [
+  //       key,
+  //       this.backwardInnerPass(value),
+  //     ])
+  //   );
+  // }
 
   /**
    * Serializes the provided value to a JSON string.

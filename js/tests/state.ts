@@ -1,17 +1,17 @@
 import {assertThat} from '../engine/assertions.js';
 import {Suite} from '../engine/testing.js';
 import {
-  State,
   Lunchbox,
   TastyLunchbox,
   Entity,
   Var,
   registerEntity,
+  createState,
 } from '../state.js';
 
 export class StateSuite extends Suite {
   testSerializeAndDeserialize() {
-    const state = new State();
+    const state = createState();
 
     const lunchbox = state.create(Lunchbox);
     const lunchbox2 = state.create(Lunchbox);
@@ -29,13 +29,13 @@ export class StateSuite extends Suite {
     lunchbox3.heat(state);
 
     console.log(state.stringify());
-    console.log(State.parse(state.stringify()));
+    console.log(createState(state.stringify()));
 
     const derived = state.fork();
 
     lunchbox.temperature.set(derived, 123);
     derived.destroy(microwave);
     console.log(derived.stringify());
-    console.log(State.parse(derived.stringify()));
+    console.log(createState(derived.stringify()));
   }
 }

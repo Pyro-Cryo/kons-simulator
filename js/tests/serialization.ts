@@ -14,7 +14,7 @@ export class SerializationSuite extends Suite {
         readonly z: string
       ) {}
     }
-    const S = Symbol("S");
+    const S = Symbol('S');
     serializer.addClass(
       X,
       (x: X) => x.x,
@@ -22,32 +22,34 @@ export class SerializationSuite extends Suite {
     );
     serializer.addClass(
       Y,
-      (y: Y) => ({xParam: y.x.x, z: y.z}),
-      (s) => new Y(new X(s.xParam), s.z)
+      (y: Y) => ({x: y.x, z: y.z}),
+      (s) => new Y(s.x, s.z)
     );
     serializer.addSymbol(S);
 
-    const str = serializer.stringify([
-      1,
-      2,
-      {a: 3, b: 4, c: {d: 5}},
-      null,
-      undefined,
-      false,
-      S,
-      new X(),
-      new Y(new X(), 'hello'),
-      [1, 2, [3, 4], {a: 5, b: {c: 6}, d: new X()}],
-    ]);
+    const str = serializer.stringify(
+      [
+        1,
+        2,
+        {a: 3, b: 4, c: {d: 5}},
+        null,
+        undefined,
+        false,
+        S,
+        new X(),
+        new Y(new X(), 'hello'),
+        [1, 2, [3, 4], {a: 5, b: {c: 6}, d: new X()}],
+      ],
+      true
+    );
     console.log(str);
     const parsed = serializer.parse(str) as unknown[];
     assertThat(parsed[7]).isInstanceOf(X);
 
-    console.log("Parsed:", parsed);
+    console.log('Parsed:', parsed);
   }
 
   testSomethingElse() {
-    
     class Abc {
       constructor(readonly x: number) {}
     }
