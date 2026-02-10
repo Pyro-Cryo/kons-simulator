@@ -1,18 +1,109 @@
-import {assertThat} from '../engine/assertions.js';
+import {assertThat, assertThrows} from '../engine/assertions.js';
 import {Suite} from '../engine/testing.js';
 import {JsonSerializer} from '../serialization.js';
 
 export class SerializationSuite extends Suite {
+  serializer: JsonSerializer = new JsonSerializer();
+  setUp() {
+    this.serializer = new JsonSerializer();
+  }
+
+  testAddSymbolRejectsSymbolsWithoutDescription() {
+    assertThrows(() => this.serializer.addSymbol(Symbol()));
+  }
+
+  testAddSymbolRejectsAlreadyRegistered() {
+    const symbol = Symbol('description');
+    this.serializer.addSymbol(symbol);
+
+    assertThrows(() => this.serializer.addSymbol(symbol));
+  }
+
+  testAddClassRejectsAlreadyRegisteredClass() {
+    class X {}
+    this.serializer.addClass(
+      X,
+      (_) => null,
+      (_) => new X()
+    );
+
+    assertThrows(() =>
+      this.serializer.addClass(
+        X,
+        (_) => null,
+        (_) => new X()
+      )
+    );
+  }
+
+  testAddClassRejectsAlreadyRegisteredKey() {
+    class X {}
+    class Y {}
+    const customKey = 'abc123';
+
+    this.serializer.addClass(
+      X,
+      (_) => null,
+      (_) => new X(),
+      customKey
+    );
+
+    assertThrows(() =>
+      this.serializer.addClass(
+        Y,
+        (_) => null,
+        (_) => new Y(),
+        customKey
+      )
+    );
+  }
+
+  testRoundtripObject() {
+    const object = {a: 123, b: 'string', c: false, d: undefined, e: null};
+
+    const serialized = this.serializer.stringify(object);
+    const deserialized = this.serializer.parse(serialized) as typeof object;
+
+    assertThat(deserialized).mappingEquals(object);
+  }
+
+  testRoundtripArray() {
+    const array = [123, 'string', false, undefined, null];
+
+    const serialized = this.serializer.stringify(array);
+    const deserialized = this.serializer.parse(serialized) as typeof array;
+
+    assertThat(deserialized).sequenceEquals(array);
+  }
+
+  testRoundtripCustomObject() {
+    class X {
+      constructor(readonly num: number) {}
+    }
+    this.serializer.addClass(
+      X,
+      (x) => x.num,
+      (num) => new X(num)
+    );
+    const x = new X(123);
+
+    const serialized = this.serializer.stringify(x);
+    const deserialized = this.serializer.parse(serialized) as X;
+
+    assertThat(deserialized).isInstanceOf(X);
+    assertThat(deserialized.num).equals(x.num);
+    assertThat(deserialized)
+      .withMessage('Expected a different instance')
+      .not.equals(x);
+  }
+
   testCanSerialize() {
     const serializer = new JsonSerializer();
     class X {
       constructor(readonly x = 1234) {}
     }
     class Y {
-      constructor(
-        readonly x: X,
-        readonly z: string
-      ) {}
+      constructor(readonly x: X, readonly z: string) {}
     }
     const S = Symbol('S');
     serializer.addClass(

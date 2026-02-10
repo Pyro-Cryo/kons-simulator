@@ -62,7 +62,7 @@ export function registerEntities(
 }
 
 function isEntityClass(object: unknown): object is EntityConstructor {
-  if (typeof object !== "function") {
+  if (typeof object !== 'function') {
     return false;
   }
   while (object !== null) {
@@ -479,7 +479,21 @@ export class SetVar<T> {
     }
     return result;
   }
-  // TODO: Borde gå att implementera en hyfsat okej *iterate().
+
+  // TODO: Test if equivalent to get().
+  *iterate(state: State): Generator<T, void, unknown> {
+    const deleted = new Set<T>();
+    for (const patch of (state as BaseState).getVariablePatches(
+      this.variable
+    )) {
+      patch['-']?.forEach((element) => deleted.add(element));
+      for (const element of patch['+'] ?? []) {
+        if (!deleted.has(element)) {
+          yield element;
+        }
+      }
+    }
+  }
 }
 
 /** Only for use in tests. */

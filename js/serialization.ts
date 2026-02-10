@@ -18,13 +18,12 @@ export type Serializable =
   | {[key: string]: Serializable} // Close enough.
   | Array<Serializable>;
 
-type Type = new (...args: never[]) => unknown;
+type Type = abstract new (...args: any) => any;
 
 const TYPE = '#type';
 const VALUE = '#val';
 const UNDEFINED_KEY = 'undefined';
 const SYMBOL_KEY = 'Symbol';
-const PLAIN_OBJECT_KEY = '';
 
 interface SerializerWithKey {
   key: string;
@@ -42,30 +41,10 @@ export class JsonSerializer {
 
   constructor() {
     // Add undefined and symbol deserializers so we can skip some special cases
-    // in backwardOuterPass.
+    // in backwardPass.
     this.deserializers.set(UNDEFINED_KEY, (_) => undefined);
     this.deserializers.set(SYMBOL_KEY, (description: string) =>
       this.deserializeSymbol(description)
-    );
-    // Object literals without a class.
-    this.addClass(
-      Object,
-      // Recurse into all values. Symbol keys will be dropped.
-      (object) =>
-        Object.fromEntries(
-          Object.entries(object).map(([key, value]) => [
-            key,
-            this.forwardOuterPass(value),
-          ])
-        ),
-      (object) =>
-        Object.fromEntries(
-          Object.entries(object).map(([key, value]) => [
-            key,
-            this.backwardOuterPass(value),
-          ])
-        ),
-      PLAIN_OBJECT_KEY
     );
   }
 
@@ -129,7 +108,11 @@ export class JsonSerializer {
     this.deserializers.set(key, deserializer);
   }
 
-  private forwardOuterPass(value: unknown): NativelySerializable {
+  /**
+   * Recursively applies predefined and custom serializers to construct a value
+   * that can be handled by the regular JSON serializer.
+   */
+  private forwardPass(value: unknown): NativelySerializable {
     if (value === null) {
       return value;
     }
@@ -148,7 +131,7 @@ export class JsonSerializer {
     }
     if (value instanceof Array) {
       // Process all elements in the array.
-      return value.map((element: unknown) => this.forwardOuterPass(element));
+      return value.map((element: unknown) => this.forwardPass(element));
     }
     if (value?.constructor === Object) {
       if (TYPE in (value as object) || VALUE in (value as object)) {
@@ -158,7 +141,7 @@ export class JsonSerializer {
       }
       // Recurse into all values. Symbol keys will be dropped.
       return Object.fromEntries(
-        Object.entries(value).map(([k, v]) => [k, this.forwardOuterPass(v)])
+        Object.entries(value).map(([k, v]) => [k, this.forwardPass(v)])
       );
     }
 
@@ -170,7 +153,7 @@ export class JsonSerializer {
     }
 
     const {key, serializer} = serializerWithKey;
-    const serialized = this.forwardOuterPass(serializer(value as never));
+    const serialized = this.forwardPass(serializer(value as never));
     if (
       typeof serialized === 'object' &&
       serialized !== null &&
@@ -181,17 +164,21 @@ export class JsonSerializer {
       return serialized;
     }
     // Primitives and arrays are wrapped to attach type information.
-    return {[TYPE]: key, [VALUE]: this.forwardOuterPass(serialized)};
+    return {[TYPE]: key, [VALUE]: this.forwardPass(serialized)};
   }
 
-  private backwardOuterPass(value: NativelySerializable): unknown {
+  /**
+   * Recursively applies predefined and custom deserializers on a plain JSON
+   * value to reconstruct custom objects.
+   */
+  private backwardPass(value: NativelySerializable): unknown {
     if (value === null || typeof value !== 'object') {
       return value;
     }
     if (value instanceof Array) {
       // Process all elements in the array.
       return value.map((element: NativelySerializable) =>
-        this.backwardOuterPass(element)
+        this.backwardPass(element)
       );
     }
 
@@ -199,7 +186,7 @@ export class JsonSerializer {
     if (key === undefined) {
       // Plain objects do not get a type key when serialized.
       return Object.fromEntries(
-        Object.entries(value).map(([k, v]) => [k, this.backwardOuterPass(v)])
+        Object.entries(value).map(([k, v]) => [k, this.backwardPass(v)])
       );
     }
 
@@ -212,65 +199,8 @@ export class JsonSerializer {
     } else {
       delete value[TYPE];
     }
-    return deserializer(this.backwardOuterPass(value) as never);
+    return deserializer(this.backwardPass(value) as never);
   }
-
-  // Replace undefined and symbols.
-  // private forwardInnerPass(value: Serializable): NativelySerializable {
-  //   if (value === undefined) {
-  //     return {[TYPE]: UNDEFINED_KEY};
-  //   }
-  //   if (typeof value === 'symbol') {
-  //     if (value.description === undefined) {
-  //       throw new Error(`Symbol without description: ${String(value)}`);
-  //     }
-  //     if (!this.symbols.has(value.description)) {
-  //       throw new Error(`Symbol not registered: ${String(value)}`);
-  //     }
-  //     return {[TYPE]: SYMBOL_KEY, [VALUE]: value.description};
-  //   }
-  //   if (value instanceof Array) {
-  //     return value.map((element: Serializable) =>
-  //       this.forwardInnerPass(element)
-  //     );
-  //   }
-  //   if (typeof value === 'object' && value !== null) {
-  //     return Object.fromEntries(
-  //       Object.entries(value).map(([key, value]) => [
-  //         key,
-  //         this.forwardInnerPass(value),
-  //       ])
-  //     );
-  //   }
-  //   return value;
-  // }
-
-  // Recreate undefined and symbols.
-  // private backwardInnerPass(value: NativelySerializable): Serializable {
-  //   if (typeof value !== 'object' || value === null) {
-  //     return value;
-  //   }
-  //   if (value instanceof Array) {
-  //     return value.map((element: NativelySerializable) =>
-  //       this.backwardInnerPass(element)
-  //     );
-  //   }
-
-  //   switch (value[TYPE]) {
-  //     case UNDEFINED_KEY:
-  //       return undefined;
-  //     case SYMBOL_KEY:
-  //       return this.deserializers.get(SYMBOL_KEY)!(
-  //         value[VALUE] as never
-  //       ) as symbol;
-  //   }
-  //   return Object.fromEntries(
-  //     Object.entries(value).map(([key, value]) => [
-  //       key,
-  //       this.backwardInnerPass(value),
-  //     ])
-  //   );
-  // }
 
   /**
    * Serializes the provided value to a JSON string.
@@ -280,7 +210,7 @@ export class JsonSerializer {
    */
   stringify(value: unknown, pretty: boolean = false) {
     return JSON.stringify(
-      this.forwardOuterPass(value),
+      this.forwardPass(value),
       undefined,
       pretty ? 2 : undefined
     );
@@ -292,6 +222,6 @@ export class JsonSerializer {
    * @returns The deserialized object.
    */
   parse(string: string): unknown {
-    return this.backwardOuterPass(JSON.parse(string));
+    return this.backwardPass(JSON.parse(string));
   }
 }
