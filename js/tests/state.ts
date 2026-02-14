@@ -7,6 +7,7 @@ import {
   Var,
   registerEntity,
   createState,
+  SetVar,
 } from '../state.js';
 
 export class StateSuite extends Suite {
@@ -21,10 +22,13 @@ export class StateSuite extends Suite {
     class Microwave extends Entity {
       private model = new Var('Electrolux');
       private power = new Var(1000);
+      buttonLabels = new SetVar<string>();
     }
     registerEntity(Microwave);
 
     const microwave = state.create(Microwave);
+    microwave.buttonLabels.add(state, 'start');
+    microwave.buttonLabels.add(state, 'stop');
     state.destroy(lunchbox2);
     lunchbox3.heat(state);
 
@@ -34,7 +38,13 @@ export class StateSuite extends Suite {
     const derived = state.fork();
 
     lunchbox.temperature.set(derived, 123);
-    derived.destroy(microwave);
+    microwave.buttonLabels.add(derived, 'pause');
+    microwave.buttonLabels.delete(derived, 'stop');
+    assertThat(microwave.buttonLabels.get(derived)).setEquals([
+      'start',
+      'pause',
+    ]);
+    // derived.destroy(microwave);
     console.log(derived.stringify());
     console.log(createState(derived.stringify()));
   }

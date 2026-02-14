@@ -18,6 +18,7 @@ export type Serializable =
   | {[key: string]: Serializable} // Close enough.
   | Array<Serializable>;
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Type = abstract new (...args: any) => any;
 
 const TYPE = '#type';
@@ -31,8 +32,8 @@ interface SerializerWithKey {
 }
 
 /**
- * Extra functionality for serializing and deserializing more JSON objects (e.g.
- * custom classes, Symbols, undefined).
+ * Extra functionality for serializing and deserializing more JSON objects,
+ * including Sets, Maps, custom classes, Symbols, undefined).
  */
 export class JsonSerializer {
   private readonly symbols = new Map<string, symbol>();
@@ -46,6 +47,9 @@ export class JsonSerializer {
     this.deserializers.set(SYMBOL_KEY, (description: string) =>
       this.deserializeSymbol(description)
     );
+    // Other common collections.
+    this.addClass(Set, (set) => Array.from(set), (array) => new Set(array));
+    this.addClass(Map, (map) => Array.from(map), (array) => new Map(array));
   }
 
   /** Register a symbol so that it can be (de)serialized. */

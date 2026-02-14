@@ -18,6 +18,7 @@ type VariableId = number;
 
 type EntityConstructor<E extends Entity = Entity> = new (id: EntityId) => E;
 type RecordOrArray<T> = T[] | Record<string, T>;
+type Variable = Var<unknown> | SetVar<unknown>;
 
 interface SerializedEntity {
   id: EntityId;
@@ -74,9 +75,7 @@ function isEntityClass(object: unknown): object is EntityConstructor {
   return false;
 }
 
-function getVariables(
-  entity: Entity
-): [string, Var<unknown> | SetVar<unknown>][] {
+function getVariables(entity: Entity): [string, Variable][] {
   return Object.entries(entity).filter(
     ([_, value]) => value instanceof Var || value instanceof SetVar
   );
@@ -205,7 +204,7 @@ class BaseState {
   private deserializeEntity(
     entityClass: EntityConstructor,
     serialized: SerializedEntity,
-    variableMapping: Map<VariableId, VariableId>
+    variableMapping: Map<VariableId, Variable>
   ): Entity {
     // Creating a new entity also creates new Var instances, which will likely
     // have other IDs than the ones in `serialized`. The `variableMapping` lets
@@ -214,7 +213,7 @@ class BaseState {
     for (const [key, variable] of getVariables(entity)) {
       const serializedId = serialized[key];
       if (serializedId !== undefined) {
-        variableMapping.set(serializedId, variable.id);
+        variableMapping.set(serializedId, variable);
       }
     }
     // Ensure new entities don't get overlapping IDs.
@@ -223,9 +222,9 @@ class BaseState {
     return entity;
   }
 
-  private getSerializer(): [JsonSerializer, Map<VariableId, VariableId>] {
+  private getSerializer(): [JsonSerializer, Map<VariableId, Variable>] {
     const serializer = new JsonSerializer();
-    const variableMapping = new Map<VariableId, VariableId>();
+    const variableMapping = new Map<VariableId, Variable>();
     serializer.addSymbol(STORED_UNDEFINED);
     entityTypes.forEach((entityClass) =>
       serializer.addClass(
@@ -245,7 +244,6 @@ class BaseState {
    */
   stringify(): string {
     const entities = Array.from(this.iterate());
-    // TODO: Handle SetVar (and future others).
     const variables = entities.flatMap((e) =>
       getVariables(e).map(
         ([_, variable]) =>
@@ -270,9 +268,9 @@ class BaseState {
     );
     // Entities are automatically added to the state during deserialization, but
     // variables are copied over manually.
-    for (const [serializedId, deserializedId] of variableMapping.entries()) {
-      // TODO: This will not work for SetVar.
-      state.variables.set(deserializedId, variables.get(serializedId));
+    for (const [serializedId, deserialized] of variableMapping.entries()) {
+      // Casts to Var to get the correct typing, but works for SetVar as well.
+      (deserialized as Var<unknown>).set(state, variables.get(serializedId));
     }
     return state;
   }
@@ -342,11 +340,11 @@ class DerivedState extends BaseState {
     originalFirst: boolean = false
   ): Generator<Partial<T>, void, unknown> {
     if (originalFirst) {
-      yield* super.getVariablePatches(variable);
       yield* this.original.getVariablePatches(variable, originalFirst);
+      yield* super.getVariablePatches(variable);
     } else {
-      yield* this.original.getVariablePatches(variable, originalFirst);
       yield* super.getVariablePatches(variable);
+      yield* this.original.getVariablePatches(variable, originalFirst);
     }
   }
 }
@@ -430,20 +428,14 @@ export class SetVar<T> {
 
   /** Add the value to the set in the given state. */
   add(state: State, value: T) {
-    let patch = (state as BaseState).getVariablePatch(this.variable);
-    if (patch === undefined) {
-      patch = {'+': new Set()};
-    }
+    const patch = (state as BaseState).getVariablePatch(this.variable);
     patch['-']?.delete(value);
     (patch['+'] ??= new Set()).add(value);
   }
 
   /** Remove the value from the set in the given state. */
   delete(state: State, value: T) {
-    let patch = (state as BaseState).getVariablePatch(this.variable);
-    if (patch === undefined) {
-      patch = {'-': new Set()};
-    }
+    const patch = (state as BaseState).getVariablePatch(this.variable);
     patch['+']?.delete(value);
     (patch['-'] ??= new Set()).add(value);
   }
@@ -480,19 +472,21 @@ export class SetVar<T> {
     return result;
   }
 
-  // TODO: Test if equivalent to get().
-  *iterate(state: State): Generator<T, void, unknown> {
-    const deleted = new Set<T>();
-    for (const patch of (state as BaseState).getVariablePatches(
-      this.variable
-    )) {
-      patch['-']?.forEach((element) => deleted.add(element));
-      for (const element of patch['+'] ?? []) {
-        if (!deleted.has(element)) {
-          yield element;
-        }
-      }
+  /** Removes all elements from the set. */
+  clear(state: State) {
+    const patch = (state as BaseState).getVariablePatch(this.variable);
+    delete patch['+'];
+    patch['-'] = this.get(state);
+    if (patch['-'].size === 0) {
+      delete patch['-'];
     }
+  }
+
+  /** Overwrites the set. */
+  set(state: State, values: Set<T>) {
+    this.clear(state);
+    const patch = (state as BaseState).getVariablePatch(this.variable);
+    patch['+'] = values;
   }
 }
 
