@@ -12,13 +12,9 @@ import {JsonSerializer} from './serialization.js';
 type EntityId = number;
 type VariableId = number;
 
-// class EntityReference {
-//   constructor(readonly id: EntityId) {}
-// }
-
 type EntityConstructor<E extends Entity = Entity> = new (id: EntityId) => E;
 type RecordOrArray<T> = T[] | Record<string, T>;
-type Variable = Var<unknown> | SetVar<unknown>;
+type VariableMapping = Map<VariableId, Serializable<unknown>>;
 
 interface SerializedEntity {
   id: EntityId;
@@ -75,9 +71,9 @@ function isEntityClass(object: unknown): object is EntityConstructor {
   return false;
 }
 
-function getVariables(entity: Entity): [string, Variable][] {
+function getVariables(entity: Entity): [string, BaseVariable<unknown>][] {
   return Object.entries(entity).filter(
-    ([_, value]) => value instanceof Var || value instanceof SetVar
+    ([_, value]) => value instanceof BaseVariable
   );
 }
 
@@ -95,12 +91,12 @@ class BaseState {
    * @returns The variable's value, or its default value if it is not set.
    *     Consider it immutable unless you really know what you are doing.
    */
-  getVariable<T>(variable: Var<T>): Readonly<T> {
+  getVariable<T>(variable: Storable<T>): Readonly<T> {
     const value = this.variables.get(variable.id) as T;
     if (value === undefined) {
       // Behövs nog inte? Iallafall inte så länge defaultValue bara är en const.
       // this.variables.set(variable.id, variable.defaultValue);
-      return variable.defaultValue;
+      return variable.getDefault();
     }
     return value === STORED_UNDEFINED ? (undefined as T) : value;
   }
@@ -111,7 +107,7 @@ class BaseState {
    * @param value The value to set. Prefer immutable values, or at least
    *     treating them as such.
    */
-  setVariable<T>(variable: Var<T>, value: T): void {
+  setVariable<T>(variable: Storable<T>, value: T): void {
     this.variables.set(
       variable.id,
       value === undefined ? STORED_UNDEFINED : value
@@ -131,10 +127,10 @@ class BaseState {
    * @param variable The variable to get the patch for.
    * @returns The variable patch, or undefined if none exists.
    */
-  getVariablePatch<T extends object>(variable: Var<T>): Partial<T> {
-    let patch = this.variables.get(variable.id) as Partial<T> | undefined;
+  getVariablePatch<T>(variable: Storable<T>): T {
+    let patch = this.variables.get(variable.id) as T | undefined;
     if (patch === undefined) {
-      patch = {};
+      patch = variable.getDefault();
       this.variables.set(variable.id, patch);
     }
     return patch;
@@ -145,10 +141,10 @@ class BaseState {
    * @param variable The variabe to get the patch for.
    * @param _ Only relevant in the subclass.
    */
-  *getVariablePatches<T extends object>(
-    variable: Var<T>,
+  *getVariablePatches<T>(
+    variable: Storable<T>,
     _: boolean = false
-  ): Generator<Partial<T>, void, unknown> {
+  ): Generator<T, void, unknown> {
     const value = this.variables.get(variable.id);
     if (value !== undefined) {
       yield value as T;
@@ -204,7 +200,7 @@ class BaseState {
   private deserializeEntity(
     entityClass: EntityConstructor,
     serialized: SerializedEntity,
-    variableMapping: Map<VariableId, Variable>
+    variableMapping: VariableMapping
   ): Entity {
     // Creating a new entity also creates new Var instances, which will likely
     // have other IDs than the ones in `serialized`. The `variableMapping` lets
@@ -222,9 +218,9 @@ class BaseState {
     return entity;
   }
 
-  private getSerializer(): [JsonSerializer, Map<VariableId, Variable>] {
+  private getSerializer(): [JsonSerializer, VariableMapping] {
     const serializer = new JsonSerializer();
-    const variableMapping = new Map<VariableId, Variable>();
+    const variableMapping = new Map();
     serializer.addSymbol(STORED_UNDEFINED);
     entityTypes.forEach((entityClass) =>
       serializer.addClass(
@@ -247,7 +243,7 @@ class BaseState {
     const variables = entities.flatMap((e) =>
       getVariables(e).map(
         ([_, variable]) =>
-          [variable.id, variable.get(this)] as [number, unknown]
+          [variable.id, variable.serialize(this)] as [number, unknown]
       )
     );
     const serializedState: SerializedState = {variables, entities};
@@ -269,8 +265,7 @@ class BaseState {
     // Entities are automatically added to the state during deserialization, but
     // variables are copied over manually.
     for (const [serializedId, deserialized] of variableMapping.entries()) {
-      // Casts to Var to get the correct typing, but works for SetVar as well.
-      (deserialized as Var<unknown>).set(state, variables.get(serializedId));
+      deserialized.deserialize(state, variables.get(serializedId));
     }
     return state;
   }
@@ -295,7 +290,7 @@ class DerivedState extends BaseState {
    * @param variable The variable to get the value of.
    * @returns The variable's value.
    */
-  override getVariable<T>(variable: Var<T>): Readonly<T> {
+  override getVariable<T>(variable: Storable<T>): Readonly<T> {
     const value = this.variables.get(variable.id) as T;
     if (value === undefined) {
       return this.original.getVariable(variable);
@@ -335,10 +330,10 @@ class DerivedState extends BaseState {
    *     to iterate "backwards", i.e. yield the current state's patch before its
    *     original.
    */
-  override *getVariablePatches<T extends object>(
-    variable: Var<T>,
+  override *getVariablePatches<T>(
+    variable: Storable<T>,
     originalFirst: boolean = false
-  ): Generator<Partial<T>, void, unknown> {
+  ): Generator<T, void, unknown> {
     if (originalFirst) {
       yield* this.original.getVariablePatches(variable, originalFirst);
       yield* super.getVariablePatches(variable);
@@ -369,13 +364,35 @@ export function createState(serialized?: string): State {
   return new BaseState();
 }
 
-// Variable definition
-export class Var<T> {
+interface Storable<T> {
+  id: VariableId;
+  getDefault(): T;
+}
+
+interface Serializable<T> {
+  serialize(state: State): T;
+  deserialize(state: State, serialized: T): void;
+}
+
+abstract class BaseVariable<T, Stored = T, Serialized = T>
+implements Storable<Stored>, Serializable<Serialized>
+{
   private static nextId = 0;
+  public readonly id: VariableId = BaseVariable.nextId++;
+  abstract getDefault(): Stored;
 
-  public readonly id: number = Var.nextId++;
+  abstract get(state: State): T;
+  abstract set(state: State, value: T): void;
 
-  constructor(public readonly defaultValue: T) {}
+  abstract serialize(state: State): Serialized;
+  abstract deserialize(state: State, serialized: Serialized): void;
+}
+
+// Basic variable definition.
+export class Var<T> extends BaseVariable<T> {
+  constructor(public readonly defaultValue: T) {
+    super();
+  }
 
   /**
    * Gets the value of the given variable.
@@ -396,10 +413,14 @@ export class Var<T> {
   set(state: State, value: T) {
     (state as BaseState).setVariable(this, value);
   }
-}
 
-/** Frozen empty patch, to prevent accidental modification. */
-const DEFAULT_FOR_PATCH = Object.freeze({});
+  getDefault(): Readonly<T> {
+    return this.defaultValue;
+  }
+
+  serialize = this.get;
+  deserialize = this.set;
+}
 
 // Patches for a Set variable.
 interface SetPatch<T> {
@@ -422,20 +443,21 @@ interface SetPatch<T> {
  * - You need anything other than addition, removal, and checking for presence.
  *   For example, checking the size of the collection.
  */
-export class SetVar<T> {
-  private readonly variable = new Var<SetPatch<T>>(DEFAULT_FOR_PATCH);
-  public readonly id = this.variable.id;
+export class SetVar<T> extends BaseVariable<Set<T>, SetPatch<T>> {
+  getDefault(): SetPatch<T> {
+    return {};
+  }
 
   /** Add the value to the set in the given state. */
   add(state: State, value: T) {
-    const patch = (state as BaseState).getVariablePatch(this.variable);
+    const patch = (state as BaseState).getVariablePatch(this);
     patch['-']?.delete(value);
     (patch['+'] ??= new Set()).add(value);
   }
 
   /** Remove the value from the set in the given state. */
   delete(state: State, value: T) {
-    const patch = (state as BaseState).getVariablePatch(this.variable);
+    const patch = (state as BaseState).getVariablePatch(this);
     patch['+']?.delete(value);
     (patch['-'] ??= new Set()).add(value);
   }
@@ -443,7 +465,7 @@ export class SetVar<T> {
   /** Check if the set contains the value in the given state. */
   has(state: State, value: T): boolean {
     for (const patch of (state as BaseState).getVariablePatches<SetPatch<T>>(
-      this.variable
+      this
     )) {
       if (patch['+']?.has(value)) {
         // Patch adds the value. Potential additions and/or deletions higher up
@@ -462,10 +484,7 @@ export class SetVar<T> {
   /** Creates an equivalent Set based on the given state. */
   get(state: State): Set<T> {
     const result = new Set<T>();
-    for (const patch of (state as BaseState).getVariablePatches(
-      this.variable,
-      true
-    )) {
+    for (const patch of (state as BaseState).getVariablePatches(this, true)) {
       patch['+']?.forEach((element) => result.add(element));
       patch['-']?.forEach((element) => result.delete(element));
     }
@@ -474,7 +493,7 @@ export class SetVar<T> {
 
   /** Removes all elements from the set. */
   clear(state: State) {
-    const patch = (state as BaseState).getVariablePatch(this.variable);
+    const patch = (state as BaseState).getVariablePatch(this);
     delete patch['+'];
     patch['-'] = this.get(state);
     if (patch['-'].size === 0) {
@@ -485,9 +504,12 @@ export class SetVar<T> {
   /** Overwrites the set. */
   set(state: State, values: Set<T>) {
     this.clear(state);
-    const patch = (state as BaseState).getVariablePatch(this.variable);
+    const patch = (state as BaseState).getVariablePatch(this);
     patch['+'] = values;
   }
+
+  serialize = this.get;
+  deserialize = this.set;
 }
 
 /** Only for use in tests. */

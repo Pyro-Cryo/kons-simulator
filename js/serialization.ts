@@ -95,8 +95,8 @@ export class JsonSerializer {
    */
   addClass<T extends Type, S>(
     type: T,
-    serializer: (instance: InstanceType<T>) => S,
-    deserializer: (serialized: S) => InstanceType<T>,
+    serializer: (instance: InstanceType<NoInfer<T>>) => S,
+    deserializer: (serialized: S) => InstanceType<NoInfer<T>>,
     key?: string
   ) {
     key ??= type.name;
