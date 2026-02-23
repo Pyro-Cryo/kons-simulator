@@ -388,8 +388,7 @@ implements Storable<Stored>, Serializable<Serialized>
   abstract deserialize(state: State, serialized: Serialized): void;
 }
 
-// Basic variable definition.
-export class Var<T> extends BaseVariable<T> {
+class SimpleVariable<T> extends BaseVariable<T> {
   constructor(public readonly defaultValue: T) {
     super();
   }
@@ -430,20 +429,7 @@ interface SetPatch<T> {
   '-'?: Set<T>;
 }
 
-/**
- * Unordered collection that requires less memory overhead when forking states,
- * given that the collection is fairly large in the original state and the
- * derived state chain makes fairly small adjustments.
- *
- * You are probably better off with a plain `Var<Set<T>>` if any of the
- * following apply:
- * - The collection is known to be small (so that copying it incurs little
- *   overhead).
- * - Derived states are likely to replace most of its content.
- * - You need anything other than addition, removal, and checking for presence.
- *   For example, checking the size of the collection.
- */
-export class SetVar<T> extends BaseVariable<Set<T>, SetPatch<T>> {
+class SetVariable<T> extends BaseVariable<Set<T>, SetPatch<T>> {
   getDefault(): SetPatch<T> {
     return {};
   }
@@ -512,13 +498,44 @@ export class SetVar<T> extends BaseVariable<Set<T>, SetPatch<T>> {
   deserialize = this.set;
 }
 
+type SimpleVariableInterface<T> = Omit<
+  SimpleVariable<T>,
+  keyof (Serializable<T> & Storable<T>)
+>;
+type SetVariableInterface<T> = Omit<
+  SetVariable<T>,
+  keyof (Serializable<Set<T>> & Storable<SetPatch<T>>)
+>;
+
+/** Variable storing an immutable, serializable value. */
+export function variable<T>(defaultValue: T): SimpleVariableInterface<T> {
+  return new SimpleVariable(defaultValue);
+}
+
+/**
+ * Unordered collection that requires less memory overhead when forking states,
+ * given that the collection is fairly large in the original state and the
+ * derived state chain makes fairly small adjustments.
+ *
+ * You are probably better off with a plain `variable<Set<T>>()` if any of the
+ * following apply:
+ * - The collection is known to be small (so that copying it incurs little
+ *   overhead).
+ * - Derived states are likely to replace most of its content.
+ * - You need anything other than addition, removal, and checking for presence.
+ *   For example, checking the size of the collection.
+ */
+export function setVariable<T>(): SetVariableInterface<T> {
+  return new SetVariable();
+}
+
 /** Only for use in tests. */
 export const TEST_ONLY = {BaseState, DerivedState};
 
 // Test
 
 export class Lunchbox extends Entity {
-  readonly temperature = new Var(20);
+  readonly temperature = variable(20);
   // advance(state: State, delta: number) {}
 
   heat(state: State) {
@@ -527,7 +544,7 @@ export class Lunchbox extends Entity {
 }
 
 export class TastyLunchbox extends Lunchbox {
-  readonly tasteRating = new Var(5);
+  readonly tasteRating = variable(5);
 }
 
 // Register exported entities.

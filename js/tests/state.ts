@@ -4,10 +4,10 @@ import {
   Lunchbox,
   TastyLunchbox,
   Entity,
-  Var,
+  variable,
   registerEntity,
   createState,
-  SetVar,
+  setVariable,
 } from '../state.js';
 
 export class StateSuite extends Suite {
@@ -20,9 +20,9 @@ export class StateSuite extends Suite {
     const lunchbox3 = state.create(TastyLunchbox);
 
     class Microwave extends Entity {
-      private model = new Var('Electrolux');
-      private power = new Var(1000);
-      buttonLabels = new SetVar<string>();
+      private model = variable('Electrolux');
+      private power = variable(1000);
+      buttonLabels = setVariable<string>();
     }
     registerEntity(Microwave);
 
