@@ -529,6 +529,41 @@ export function setVariable<T>(): SetVariableInterface<T> {
   return new SetVariable();
 }
 
+class FunctionReference<
+  E extends Entity & {
+    [P in Name]: (...args: any[]) => void;
+  },
+  Name extends keyof E
+> {
+  constructor(private readonly entity: E, private readonly member: Name) {}
+
+  invoke(...data: Parameters<E[Name]>) {
+    this.entity[this.member](...data);
+  }
+}
+
+class Test extends Entity {
+  x: number = 123;
+  func1(): 123 {
+    return 123;
+  }
+
+  func2(s: string) {
+    console.log('s:', s);
+  }
+
+  func3(a: number, b: number): number {
+    return a + b;
+  }
+}
+
+const f = new FunctionReference(new Test(123), 'func1');
+const f2 = new FunctionReference(new Test(123), 'func2');
+const f3 = new FunctionReference(new Test(123), 'func3');
+f.invoke();
+f2.invoke('string');
+f3.invoke(1, 2);
+
 /** Only for use in tests. */
 export const TEST_ONLY = {BaseState, DerivedState};
 
