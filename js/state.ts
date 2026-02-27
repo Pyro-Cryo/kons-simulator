@@ -183,10 +183,11 @@ class BaseState {
    * @param entity The entity to delete.
    */
   destroy(entity: Entity) {
-    // TODO: Handle entity references
-    // TODO: Clean up its variables?
     if (!this.entities.delete(entity.id)) {
       throw new Error(`Entity does not exist in this state: ${entity.id}`);
+    }
+    for (const [_, variable] of getVariables(entity)) {
+      this.variables.delete(variable.id);
     }
   }
 
