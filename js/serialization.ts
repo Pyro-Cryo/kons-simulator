@@ -2,7 +2,7 @@ type JsonPrimitive = number | string | boolean | null;
 /**
  * Objects and primitives that can be natively handled by the JSON parser.
  */
-type NativelySerializable =
+export type NativelySerializable =
   | JsonPrimitive
   | {[key: string]: NativelySerializable}
   | Array<NativelySerializable>;
@@ -206,6 +206,16 @@ export class JsonSerializer {
     return deserializer(this.backwardPass(value) as never);
   }
 
+  /** Serializes the provided value to a plain, JSON-serializable value. */
+  toNative(value: unknown): NativelySerializable {
+    return this.forwardPass(value);
+  }
+
+  /** Reconstructs custom objects from a plain, JSON-serializable value. */
+  fromNative(native: NativelySerializable): unknown {
+    return this.backwardPass(native);
+  }
+
   /**
    * Serializes the provided value to a JSON string.
    * @param value The value to serialize.
@@ -214,7 +224,7 @@ export class JsonSerializer {
    */
   stringify(value: unknown, pretty: boolean = false) {
     return JSON.stringify(
-      this.forwardPass(value),
+      this.toNative(value),
       undefined,
       pretty ? 2 : undefined
     );
@@ -222,10 +232,10 @@ export class JsonSerializer {
 
   /**
    * Parses the given JSON string, applying the custom deserializers.
-   * @param string The result of a call to serialize().
+   * @param string The result of a call to stringify().
    * @returns The deserialized object.
    */
   parse(string: string): unknown {
-    return this.backwardPass(JSON.parse(string));
+    return this.fromNative(JSON.parse(string));
   }
 }

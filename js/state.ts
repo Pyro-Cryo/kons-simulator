@@ -1,4 +1,4 @@
-import {JsonSerializer} from './serialization.js';
+import {JsonSerializer, NativelySerializable} from './serialization.js';
 
 // export interface State {
 //   // create(/* TODO */): EntityReference;
@@ -11,6 +11,8 @@ import {JsonSerializer} from './serialization.js';
 
 type EntityId = number;
 type VariableId = number;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Callable<R = void> = (...args: any[]) => R;
 
 type EntityConstructor<E extends Entity = Entity> = new (id: EntityId) => E;
 type RecordOrArray<T> = T[] | Record<string, T>;
@@ -22,10 +24,24 @@ interface SerializedEntity {
 }
 
 interface SerializedState {
-  variables: [VariableId, unknown][];
-  entities: Entity[];
+  variables: [VariableId, NativelySerializable][];
+  entities: SerializedEntity[];
   // Maybe store some version id if we want to be super backwards
   // compatible.
+}
+
+interface SerializerConfig {
+  /**
+   * Configures entity serialization to only include an entity ID, omitting all
+   * variables, and deserialization to look up an existing entity based on the
+   * ID. Used to handle entity references stored in variables.
+   */
+  minimalEntities: boolean;
+  /**
+   * Maps serialized variable IDs to newly created variable instances. Used
+   * during deserialization to populate variables with their stored values.
+   */
+  variableMapping: VariableMapping;
 }
 
 export class Entity {
@@ -81,7 +97,7 @@ const STORED_UNDEFINED = Symbol('undefined');
 
 class BaseState {
   protected readonly variables = new Map<VariableId, unknown>();
-  protected readonly entities = new Set<Entity>();
+  protected readonly entities = new Map<EntityId, Entity>();
 
   protected nextId: EntityId = 0;
 
@@ -158,7 +174,7 @@ class BaseState {
    */
   create<E extends Entity>(entityClass: EntityConstructor<E>): E {
     const entity = new entityClass(this.nextId++);
-    this.entities.add(entity);
+    this.entities.set(entity.id, entity);
     return entity;
   }
 
@@ -169,14 +185,22 @@ class BaseState {
   destroy(entity: Entity) {
     // TODO: Handle entity references
     // TODO: Clean up its variables?
-    if (!this.entities.delete(entity)) {
+    if (!this.entities.delete(entity.id)) {
       throw new Error(`Entity does not exist in this state: ${entity.id}`);
     }
   }
 
+  get(id: EntityId) {
+    const entity = this.entities.get(id);
+    if (!entity) {
+      throw new Error(`Entity does not exist in this state: ${id}`);
+    }
+    return entity;
+  }
+
   /** Iterates over all entities that exist in the current state. */
   *iterate(): Generator<Entity, void, unknown> {
-    yield* this.entities;
+    yield* this.entities.values();
   }
 
   /**
@@ -188,7 +212,13 @@ class BaseState {
     return new DerivedState(this);
   }
 
-  private serializeEntity(entity: Entity): SerializedEntity {
+  private serializeEntity(
+    entity: Entity,
+    {minimalEntities}: SerializerConfig
+  ): SerializedEntity {
+    if (minimalEntities) {
+      return {id: entity.id};
+    }
     return {
       id: entity.id,
       ...Object.fromEntries(
@@ -200,8 +230,28 @@ class BaseState {
   private deserializeEntity(
     entityClass: EntityConstructor,
     serialized: SerializedEntity,
-    variableMapping: VariableMapping
+    {minimalEntities, variableMapping}: SerializerConfig
   ): Entity {
+    if (minimalEntities) {
+      // The entity has already been reconstructed, we just want a reference to
+      // it.
+      const entity = this.entities.get(serialized.id);
+      if (entity === undefined) {
+        throw new Error(
+          `Expected an object with id ${serialized.id} to already have been ` +
+            'serialized'
+        );
+      }
+      if (!(entity instanceof entityClass)) {
+        const name = (entity as object).constructor.name;
+        throw new Error(
+          `Expected object with id ${serialized.id} to have type ` +
+            `${entityClass.name}, but got ${name}`
+        );
+      }
+      return entity;
+    }
+
     // Creating a new entity also creates new Var instances, which will likely
     // have other IDs than the ones in `serialized`. The `variableMapping` lets
     // us assign the correct values.
@@ -214,23 +264,21 @@ class BaseState {
     }
     // Ensure new entities don't get overlapping IDs.
     this.nextId = Math.max(this.nextId, entity.id + 1);
-    this.entities.add(entity);
+    this.entities.set(entity.id, entity);
     return entity;
   }
 
-  private getSerializer(): [JsonSerializer, VariableMapping] {
+  private getSerializer(config: SerializerConfig): JsonSerializer {
     const serializer = new JsonSerializer();
-    const variableMapping = new Map();
     serializer.addSymbol(STORED_UNDEFINED);
     entityTypes.forEach((entityClass) =>
       serializer.addClass(
         entityClass,
-        (entity: Entity) => this.serializeEntity(entity),
-        (serialized) =>
-          this.deserializeEntity(entityClass, serialized, variableMapping)
+        (entity: Entity) => this.serializeEntity(entity, config),
+        (serialized) => this.deserializeEntity(entityClass, serialized, config)
       )
     );
-    return [serializer, variableMapping];
+    return serializer;
   }
 
   /**
@@ -246,9 +294,22 @@ class BaseState {
           [variable.id, variable.serialize(this)] as [number, unknown]
       )
     );
-    const serializedState: SerializedState = {variables, entities};
-    const [serializer, _] = this.getSerializer();
-    return serializer.stringify(serializedState);
+
+    const serializerConfig: SerializerConfig = {
+      minimalEntities: false,
+      variableMapping: new Map(),
+    };
+    const serializer = this.getSerializer(serializerConfig);
+    const serializedEntities = serializer.toNative(entities);
+    // Only include the variable ID on entity references stored in variables.
+    serializerConfig.minimalEntities = true;
+    const serializedVariables = serializer.toNative(variables);
+    const serialized = {
+      entities: serializedEntities,
+      variables: serializedVariables,
+    } as SerializedState;
+
+    return JSON.stringify(serialized);
   }
 
   /**
@@ -258,13 +319,25 @@ class BaseState {
    */
   static parse(string: string): State {
     const state = new BaseState();
-    const [serializer, variableMapping] = state.getSerializer();
+    const serializerConfig: SerializerConfig = {
+      minimalEntities: false,
+      variableMapping: new Map(),
+    };
+    const serializer = state.getSerializer(serializerConfig);
+
+    const serialized = JSON.parse(string) as SerializedState;
+    serializer.fromNative(serialized.entities);
+    // Entity references in variables only store the ID.
+    serializerConfig.minimalEntities = true;
     const variables = new Map(
-      (serializer.parse(string) as SerializedState).variables
+      serializer.fromNative(serialized.variables) as typeof serialized.variables
     );
     // Entities are automatically added to the state during deserialization, but
     // variables are copied over manually.
-    for (const [serializedId, deserialized] of variableMapping.entries()) {
+    for (const [
+      serializedId,
+      deserialized,
+    ] of serializerConfig.variableMapping.entries()) {
       deserialized.deserialize(state, variables.get(serializedId));
     }
     return state;
@@ -298,13 +371,20 @@ class DerivedState extends BaseState {
     return value === STORED_UNDEFINED ? (undefined as T) : value;
   }
 
+  get(id: EntityId) {
+    if (this.deleted.has(id)) {
+      throw new Error(`Entity does not exist in this state: ${id}`);
+    }
+    return this.entities.get(id) ?? this.original.get(id);
+  }
+
   override *iterate(): Generator<Entity, void, unknown> {
     for (const entity of this.original.iterate()) {
       if (!this.deleted.has(entity.id)) {
         yield entity;
       }
     }
-    yield* this.entities;
+    yield* this.entities.values();
   }
 
   /**
@@ -313,7 +393,7 @@ class DerivedState extends BaseState {
    * @param entity The entity to delete.
    */
   override destroy(entity: Entity): void {
-    if (this.entities.has(entity)) {
+    if (this.entities.has(entity.id)) {
       // Entity created in this derived state, we can simply remove it.
       super.destroy(entity);
     }
@@ -530,16 +610,35 @@ export function setVariable<T>(): SetVariableInterface<T> {
 }
 
 class FunctionReference<
-  E extends Entity & {
-    [P in Name]: (...args: any[]) => void;
-  },
-  Name extends keyof E
+  E extends Entity & {[P in Name]: Callable},
+  Name extends keyof E,
 > {
-  constructor(private readonly entity: E, private readonly member: Name) {}
+  constructor(
+    private readonly entity: E,
+    private readonly member: Name
+  ) {}
 
   invoke(...data: Parameters<E[Name]>) {
     this.entity[this.member](...data);
   }
+}
+
+/** Only for use in tests. */
+export const TEST_ONLY = {BaseState, DerivedState};
+
+// Test
+
+export class Lunchbox extends Entity {
+  readonly temperature = variable(20);
+  // advance(state: State, delta: number) {}
+
+  heat(state: State) {
+    this.temperature.set(state, 30);
+  }
+}
+
+export class TastyLunchbox extends Lunchbox {
+  readonly tasteRating = variable(5);
 }
 
 class Test extends Entity {
@@ -563,24 +662,6 @@ const f3 = new FunctionReference(new Test(123), 'func3');
 f.invoke();
 f2.invoke('string');
 f3.invoke(1, 2);
-
-/** Only for use in tests. */
-export const TEST_ONLY = {BaseState, DerivedState};
-
-// Test
-
-export class Lunchbox extends Entity {
-  readonly temperature = variable(20);
-  // advance(state: State, delta: number) {}
-
-  heat(state: State) {
-    this.temperature.set(state, 30);
-  }
-}
-
-export class TastyLunchbox extends Lunchbox {
-  readonly tasteRating = variable(5);
-}
 
 // Register exported entities.
 import * as thisModule from './state.js';

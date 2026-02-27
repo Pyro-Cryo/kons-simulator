@@ -23,12 +23,14 @@ export class StateSuite extends Suite {
       private model = variable('Electrolux');
       private power = variable(1000);
       buttonLabels = setVariable<string>();
+      containedLunchbox = variable<Lunchbox | null>(null);
     }
     registerEntity(Microwave);
 
     const microwave = state.create(Microwave);
     microwave.buttonLabels.add(state, 'start');
     microwave.buttonLabels.add(state, 'stop');
+    microwave.containedLunchbox.set(state, lunchbox);
     state.destroy(lunchbox2);
     lunchbox3.heat(state);
 
