@@ -31,9 +31,11 @@ export class StateSuite extends Suite {
     microwave.buttonLabels.add(state, 'start');
     microwave.buttonLabels.add(state, 'stop');
     microwave.containedLunchbox.set(state, lunchbox);
+    lunchbox2.heat(state);
     state.destroy(lunchbox2);
     lunchbox3.heat(state);
 
+    console.log(state);
     console.log(state.stringify());
     console.log(createState(state.stringify()));
 

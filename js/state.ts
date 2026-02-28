@@ -30,6 +30,15 @@ interface SerializedState {
   // compatible.
 }
 
+interface StringifyParams {
+  /**
+   * Do not serialize variables that are equal to their default value. Results
+   * in a smaller serialized string which is equivalent as long as the default
+   * values do not change between serialization and deserialization.
+   */
+  omitDefaultVariables: boolean;
+}
+
 interface SerializerConfig {
   /**
    * Configures entity serialization to only include an entity ID, omitting all
@@ -42,6 +51,7 @@ interface SerializerConfig {
    * during deserialization to populate variables with their stored values.
    */
   variableMapping: VariableMapping;
+  stringifyParams?: StringifyParams;
 }
 
 export class Entity {
@@ -215,16 +225,22 @@ class BaseState {
 
   private serializeEntity(
     entity: Entity,
-    {minimalEntities}: SerializerConfig
+    {minimalEntities, stringifyParams}: SerializerConfig
   ): SerializedEntity {
     if (minimalEntities) {
       return {id: entity.id};
     }
+    if (!stringifyParams) {
+      throw new Error('Expected stringifyParams to be provided');
+    }
+
+    const {omitDefaultVariables} = stringifyParams;
+    const variables = getVariables(entity)
+      .filter(([_, v]) => v.shouldSerialize(this, omitDefaultVariables))
+      .map(([k, v]) => [k, v.id]);
     return {
       id: entity.id,
-      ...Object.fromEntries(
-        getVariables(entity).map(([key, variable]) => [key, variable.id])
-      ),
+      ...Object.fromEntries(variables),
     };
   }
 
@@ -287,18 +303,21 @@ class BaseState {
    * recreate it.
    * @returns A string that can be used to restore this state.
    */
-  stringify(): string {
+  stringify({
+    omitDefaultVariables = true,
+  }: Partial<StringifyParams> = {}): string {
     const entities = Array.from(this.iterate());
     const variables = entities.flatMap((e) =>
-      getVariables(e).map(
-        ([_, variable]) =>
-          [variable.id, variable.serialize(this)] as [number, unknown]
-      )
+      getVariables(e)
+        .map(([_, v]) => v)
+        .filter((v) => v.shouldSerialize(this, omitDefaultVariables))
+        .map((v) => [v.id, v.serialize(this)] as [number, unknown])
     );
 
     const serializerConfig: SerializerConfig = {
       minimalEntities: false,
       variableMapping: new Map(),
+      stringifyParams: {omitDefaultVariables},
     };
     const serializer = this.getSerializer(serializerConfig);
     const serializedEntities = serializer.toNative(entities);
@@ -451,6 +470,7 @@ interface Storable<T> {
 }
 
 interface Serializable<T> {
+  shouldSerialize(state: State, omitDefaultVariables: boolean): boolean;
   serialize(state: State): T;
   deserialize(state: State, serialized: T): void;
 }
@@ -465,6 +485,10 @@ implements Storable<Stored>, Serializable<Serialized>
   abstract get(state: State): T;
   abstract set(state: State, value: T): void;
 
+  abstract shouldSerialize(
+    state: State,
+    omitDefaultVariables: boolean
+  ): boolean;
   abstract serialize(state: State): Serialized;
   abstract deserialize(state: State, serialized: Serialized): void;
 }
@@ -496,6 +520,10 @@ class SimpleVariable<T> extends BaseVariable<T> {
 
   getDefault(): Readonly<T> {
     return this.defaultValue;
+  }
+
+  shouldSerialize(state: State, omitDefaultVariables: boolean): boolean {
+    return !omitDefaultVariables || this.get(state) !== this.getDefault();
   }
 
   serialize = this.get;
@@ -573,6 +601,15 @@ class SetVariable<T> extends BaseVariable<Set<T>, SetPatch<T>> {
     this.clear(state);
     const patch = (state as BaseState).getVariablePatch(this);
     patch['+'] = values;
+  }
+
+  shouldSerialize(state: State, _: boolean): boolean {
+    // The empty set is always the default, so only serialize this variable if
+    // it actually contains anything.
+    for (const _ of (state as BaseState).getVariablePatches(this)) {
+      return true;
+    }
+    return false;
   }
 
   serialize = this.get;
