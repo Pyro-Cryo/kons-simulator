@@ -1,3 +1,5 @@
+import {toString} from './engine/utils.js';
+
 type JsonPrimitive = number | string | boolean | null;
 /**
  * Objects and primitives that can be natively handled by the JSON parser.
@@ -140,7 +142,8 @@ export class JsonSerializer {
     if (value?.constructor === Object) {
       if (TYPE in (value as object) || VALUE in (value as object)) {
         throw new Error(
-          `Objects to serialize may not contain keys '${TYPE}' or '${VALUE}'`
+          `Objects to serialize may not contain keys '${TYPE}' or ` +
+            `'${VALUE}', got: ${toString(value)}`
         );
       }
       // Recurse into all values. Symbol keys will be dropped.
@@ -161,14 +164,15 @@ export class JsonSerializer {
     if (
       typeof serialized === 'object' &&
       serialized !== null &&
-      !(serialized instanceof Array)
+      !(serialized instanceof Array) &&
+      !(TYPE in serialized) 
     ) {
       // Insert type information so it can be deserialized.
       serialized[TYPE] = key;
       return serialized;
     }
     // Primitives and arrays are wrapped to attach type information.
-    return {[TYPE]: key, [VALUE]: this.forwardPass(serialized)};
+    return {[TYPE]: key, [VALUE]: serialized};
   }
 
   /**
@@ -239,3 +243,5 @@ export class JsonSerializer {
     return this.fromNative(JSON.parse(string));
   }
 }
+
+export const TEST_ONLY = {TYPE};

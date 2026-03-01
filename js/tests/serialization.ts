@@ -1,6 +1,6 @@
 import {assertThat, assertThrows} from '../engine/assertions.js';
-import {Suite} from '../engine/testing.js';
-import {JsonSerializer} from '../serialization.js';
+import {parameters, Suite} from '../engine/testing.js';
+import {JsonSerializer, TEST_ONLY} from '../serialization.js';
 
 export class SerializationSuite extends Suite {
   serializer: JsonSerializer = new JsonSerializer();
@@ -97,54 +97,96 @@ export class SerializationSuite extends Suite {
       .not.equals(x);
   }
 
-  testCanSerialize() {
-    const serializer = new JsonSerializer();
+  testRoundtripDirectlyNestedObjects() {
     class X {
-      constructor(readonly x = 1234) {}
+      constructor(readonly num: number) {}
     }
     class Y {
-      constructor(readonly x: X, readonly z: string) {}
+      constructor(readonly x: X) {}
     }
-    const S = Symbol('S');
-    serializer.addClass(
+    this.serializer.addClass(
       X,
-      (x: X) => x.x,
-      (s) => new X(s)
+      (x) => x.num,
+      (num) => new X(num)
     );
-    serializer.addClass(
+    // The serializer for Y relies on X being subsequently serializable.
+    this.serializer.addClass(
       Y,
-      (y: Y) => ({x: y.x, z: y.z}),
-      (s) => new Y(s.x, s.z)
+      (y) => y.x,
+      (x) => new Y(x)
     );
-    serializer.addSymbol(S);
+    const y = new Y(new X(123));
 
-    const str = serializer.stringify(
-      [
-        1,
-        2,
-        {a: 3, b: 4, c: {d: 5}},
-        null,
-        undefined,
-        false,
-        S,
-        new X(),
-        new Y(new X(), 'hello'),
-        [1, 2, [3, 4], {a: 5, b: {c: 6}, d: new X()}],
-      ],
-      true
-    );
-    console.log(str);
-    const parsed = serializer.parse(str) as unknown[];
-    assertThat(parsed[7]).isInstanceOf(X);
+    const serialized = this.serializer.stringify(y);
+    const deserialized = this.serializer.parse(serialized) as Y;
 
-    console.log('Parsed:', parsed);
+    assertThat(deserialized).isInstanceOf(Y);
+    assertThat(deserialized.x).isInstanceOf(X);
+    assertThat(deserialized.x)
+      .withMessage('Expected a different instance')
+      .not.equals(y.x);
+    assertThat(deserialized.x.num).equals(123);
   }
 
-  testSomethingElse() {
-    class Abc {
-      constructor(readonly x: number) {}
+  testRoundtripIndirectlyNestedObjects() {
+    class X {
+      constructor(readonly num: number) {}
     }
-    const a = new Abc(123);
-    console.log(a);
+    class Y {
+      constructor(readonly x: X) {}
+    }
+    this.serializer.addClass(
+      X,
+      (x) => x.num,
+      (num) => new X(num)
+    );
+    this.serializer.addClass(
+      Y,
+      (y) => ({x: y.x, extraKey: 'extraValue'}),
+      ({x}) => new Y(x)
+    );
+    const y = new Y(new X(123));
+    const serialized = this.serializer.stringify(y);
+    const deserialized = this.serializer.parse(serialized) as Y;
+
+    assertThat(deserialized).isInstanceOf(Y);
+    assertThat(deserialized.x).isInstanceOf(X);
+    assertThat(deserialized.x)
+      .withMessage('Expected a different instance')
+      .not.equals(y.x);
+    assertThat(deserialized.x.num).equals(123);
+  }
+
+  testStringifyRejectsObjectsWithReservedKeys() {
+    assertThrows(() => {
+      this.serializer.stringify({[TEST_ONLY.TYPE]: 'DoesNotExist'});
+    });
+  }
+
+  testStringifyRejectsSerializedObjectsWithReservedKeys() {
+    class X {
+      constructor(readonly num = 123) {}
+    }
+    this.serializer.addClass(
+      X,
+      (x) => ({[TEST_ONLY.TYPE]: x.num}),
+      (serialized) => new X(serialized[TEST_ONLY.TYPE])
+    );
+
+    assertThrows(() => {
+      this.serializer.stringify(new X());
+    });
+  }
+
+  @parameters(
+    [new (class Unregistered {})()],
+    [Symbol('Unregistered')],
+    [123n],
+    [() => 123]
+  )
+  testStringifyRejectsUnsupportedObject(value: unknown) {
+    assertThrows(() => {
+      this.serializer.stringify(value);
+    });
   }
 }
