@@ -85,18 +85,22 @@ export class InfiniteBag<T> {
  * array contains more than `max` elements, elements in the middle are omitted,
  * and the number of omitted elements are written out.
  */
-export function summarizeLongArray<T>(array: T[], max: number = 10): string {
+export function summarizeLongArray<T>(
+  array: T[],
+  max: number = 10,
+  stringifier: (element: T) => string = toString
+): string {
   let stringArray;
   if (array.length <= max) {
-    stringArray = array.map(toString);
+    stringArray = array.map(stringifier);
   } else {
     const numBefore = Math.max(0, Math.floor(max / 2));
     stringArray = array
       .slice(0, numBefore)
-      .map(toString)
+      .map(stringifier)
       .concat(
         [`(${array.length - max + 1} omitted)`],
-        array.slice(array.length - (max - 1 - numBefore)).map(toString)
+        array.slice(array.length - (max - 1 - numBefore)).map(stringifier)
       );
   }
   return stringArray.join(', ');
@@ -112,9 +116,17 @@ export function toString(value: unknown): string {
     return `[${summarizeLongArray(value, 11)}]`;
   }
 
+  if (typeof value === "function") {
+    if (value.toString().startsWith("class")) {
+      return value.name;
+    }
+    return `${value.name}(...) {...}`;
+  }
+
   if (typeof value === 'object' && value !== null) {
     if (
-      Object.getOwnPropertyNames(Object.getPrototypeOf(value)).indexOf(
+      value.constructor !== Object &&
+      Object.getOwnPropertyNames(Object.getPrototypeOf(value)).includes(
         'toString'
       )
     ) {
@@ -128,7 +140,9 @@ export function toString(value: unknown): string {
       value instanceof Map
         ? Array.from(value.entries())
         : Object.entries(value);
-    return `${typeName}(${summarizeLongArray(entries, 9)})`;
+    const stringifier = ([key, value]: [string, unknown]) =>
+      `${key}: ${toString(value)}`;
+    return `${typeName}(${summarizeLongArray(entries, 9, stringifier)})`;
   }
 
   return String(value);
