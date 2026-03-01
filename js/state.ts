@@ -295,6 +295,11 @@ class BaseState {
         (serialized) => this.deserializeEntity(entityClass, serialized, config)
       )
     );
+    serializer.addClass(
+      FunctionReference,
+      (reference) => [reference.entity, reference.member],
+      ([entity, member]) => new FunctionReference(entity, member)
+    );
     return serializer;
   }
 
@@ -538,7 +543,7 @@ interface SetPatch<T> {
   '-'?: Set<T>;
 }
 
-class SetVariable<T> extends BaseVariable<Set<T>, SetPatch<T>> {
+class SetVariable<T> extends BaseVariable<ReadonlySet<T>, SetPatch<T>> {
   getDefault(): SetPatch<T> {
     return {};
   }
@@ -577,7 +582,15 @@ class SetVariable<T> extends BaseVariable<Set<T>, SetPatch<T>> {
   }
 
   /** Creates an equivalent Set based on the given state. */
-  get(state: State): Set<T> {
+  get(state: State): ReadonlySet<T> {
+    if (state.constructor === BaseState) {
+      // We don't need to assemble the cumulative set for base states.
+      return (
+        (state as BaseState).getVariablePatches(this).next().value?.['+'] ??
+        new Set()
+      );
+    }
+
     const result = new Set<T>();
     for (const patch of (state as BaseState).getVariablePatches(this, true)) {
       patch['+']?.forEach((element) => result.add(element));
@@ -590,7 +603,7 @@ class SetVariable<T> extends BaseVariable<Set<T>, SetPatch<T>> {
   clear(state: State) {
     const patch = (state as BaseState).getVariablePatch(this);
     delete patch['+'];
-    patch['-'] = this.get(state);
+    patch['-'] = this.get(state) as Set<T>;
     if (patch['-'].size === 0) {
       delete patch['-'];
     }
@@ -616,13 +629,76 @@ class SetVariable<T> extends BaseVariable<Set<T>, SetPatch<T>> {
   deserialize = this.set;
 }
 
-type SimpleVariableInterface<T> = Omit<
+interface Invocable<T extends Array<unknown>> {
+  invoke(state: State, ...args: T): void;
+}
+
+class FunctionReference<
+  E extends Entity & {[P in Name]: Callable},
+  Name extends keyof E,
+> {
+  constructor(
+    readonly entity: E,
+    readonly member: Name
+  ) {}
+
+  invoke(...data: Parameters<E[Name]>) {
+    this.entity[this.member](...data);
+  }
+}
+
+class Signal<T extends Array<unknown>> extends SetVariable<Invocable<T>> {
+  attach<
+    E extends Entity & {[P in Name]: (state: State, ...args: T) => void},
+    Name extends keyof E,
+  >(state: State, entity: E, member: Name) {
+    const reference = new FunctionReference(entity, member);
+    this.add(state, reference);
+    return reference;
+  }
+
+  // TODO: Skriv MapVariable och använd den istället? Skulle slippa massa
+  // typstrul här.
+  detach<
+    E extends Entity & {[P in Name]: (state: State, ...args: T) => void},
+    Name extends keyof E,
+  >(state: State, reference: FunctionReference<E, Name>) {
+    this.delete(state, reference);
+  }
+
+  invoke(state: State, ...data: T) {
+    const errors = [];
+    for (const invocable of this.get(state).values()) {
+      try {
+        invocable.invoke(state, ...data);
+      } catch (e) {
+        errors.push(e);
+      }
+    }
+
+    if (errors.length === 0) {
+      return;
+    }
+    if (errors.length === 1) {
+      throw errors[0];
+    }
+    throw new Error(
+      'Multiple errors occurred:\n' + errors.map((e) => `- ${e}`).join('\n')
+    );
+  }
+}
+
+export type SimpleVariableInterface<T> = Omit<
   SimpleVariable<T>,
   keyof (Serializable<T> & Storable<T>)
 >;
-type SetVariableInterface<T> = Omit<
+export type SetVariableInterface<T> = Omit<
   SetVariable<T>,
   keyof (Serializable<Set<T>> & Storable<SetPatch<T>>)
+>;
+export type SignalInterface<T extends Array<unknown> = []> = Pick<
+  Signal<T>,
+  'attach' | 'delete' | 'invoke'
 >;
 
 /** Variable storing an immutable, serializable value. */
@@ -647,18 +723,9 @@ export function setVariable<T>(): SetVariableInterface<T> {
   return new SetVariable();
 }
 
-class FunctionReference<
-  E extends Entity & {[P in Name]: Callable},
-  Name extends keyof E,
-> {
-  constructor(
-    private readonly entity: E,
-    private readonly member: Name
-  ) {}
-
-  invoke(...data: Parameters<E[Name]>) {
-    this.entity[this.member](...data);
-  }
+/** A set of references to entity methods, which may be invoked together. */
+export function signal<T extends Array<unknown> = []>(): SignalInterface<T> {
+  return new Signal<T>();
 }
 
 /** Only for use in tests. */
@@ -678,28 +745,6 @@ export class Lunchbox extends Entity {
 export class TastyLunchbox extends Lunchbox {
   readonly tasteRating = variable(5);
 }
-
-class Test extends Entity {
-  x: number = 123;
-  func1(): 123 {
-    return 123;
-  }
-
-  func2(s: string) {
-    console.log('s:', s);
-  }
-
-  func3(a: number, b: number): number {
-    return a + b;
-  }
-}
-
-const f = new FunctionReference(new Test(123), 'func1');
-const f2 = new FunctionReference(new Test(123), 'func2');
-const f3 = new FunctionReference(new Test(123), 'func3');
-f.invoke();
-f2.invoke('string');
-f3.invoke(1, 2);
 
 // Register exported entities.
 import * as thisModule from './state.js';
