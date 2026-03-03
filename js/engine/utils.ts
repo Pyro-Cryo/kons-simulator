@@ -116,8 +116,8 @@ export function toString(value: unknown): string {
     return `[${summarizeLongArray(value, 11)}]`;
   }
 
-  if (typeof value === "function") {
-    if (value.toString().startsWith("class")) {
+  if (typeof value === 'function') {
+    if (value.toString().startsWith('class')) {
       return value.name;
     }
     return `${value.name}(...) {...}`;

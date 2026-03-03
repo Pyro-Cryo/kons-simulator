@@ -106,6 +106,8 @@ function getVariables(entity: Entity): [string, BaseVariable<unknown>][] {
 const STORED_UNDEFINED = Symbol('undefined');
 
 class BaseState {
+  /** Whether this state is a derived planning state or the base state. */
+  readonly isPlanning: boolean = false;
   protected readonly variables = new Map<VariableId, unknown>();
   protected readonly entities = new Map<EntityId, Entity>();
 
@@ -374,6 +376,7 @@ class BaseState {
  * be a DerivedState as well).
  */
 class DerivedState extends BaseState {
+  override readonly isPlanning = true;
   private deleted = new Set<EntityId>();
 
   constructor(private readonly original: BaseState) {
@@ -454,7 +457,7 @@ class DerivedState extends BaseState {
  */
 export type State = Pick<
   BaseState,
-  'create' | 'destroy' | 'iterate' | 'stringify' | 'fork'
+  'isPlanning' | 'create' | 'destroy' | 'iterate' | 'stringify' | 'fork'
 >;
 
 /**
@@ -481,7 +484,7 @@ interface Serializable<T> {
 }
 
 abstract class BaseVariable<T, Stored = T, Serialized = T>
-implements Storable<Stored>, Serializable<Serialized>
+  implements Storable<Stored>, Serializable<Serialized>
 {
   private static nextId = 0;
   public readonly id: VariableId = BaseVariable.nextId++;
@@ -537,7 +540,7 @@ class SimpleVariable<T> extends BaseVariable<T> {
 
 // Patches for a Set variable.
 interface SetPatch<T> {
-  // Add the specified elements from the cumulative set.
+  // Add the specified elements to the cumulative set.
   '+'?: Set<T>;
   // Remove the specified elements from the cumulative set.
   '-'?: Set<T>;
@@ -548,25 +551,25 @@ class SetVariable<T> extends BaseVariable<ReadonlySet<T>, SetPatch<T>> {
     return {};
   }
 
-  /** Add the value to the set in the given state. */
+  /** Adds the value to the set in the given state. */
   add(state: State, value: T) {
     const patch = (state as BaseState).getVariablePatch(this);
     patch['-']?.delete(value);
     (patch['+'] ??= new Set()).add(value);
   }
 
-  /** Remove the value from the set in the given state. */
+  /** Removes the value from the set in the given state. */
   delete(state: State, value: T) {
     const patch = (state as BaseState).getVariablePatch(this);
     patch['+']?.delete(value);
-    (patch['-'] ??= new Set()).add(value);
+    if (state.isPlanning) {
+      (patch['-'] ??= new Set()).add(value);
+    }
   }
 
-  /** Check if the set contains the value in the given state. */
+  /** Checks if the set contains the value in the given state. */
   has(state: State, value: T): boolean {
-    for (const patch of (state as BaseState).getVariablePatches<SetPatch<T>>(
-      this
-    )) {
+    for (const patch of (state as BaseState).getVariablePatches(this)) {
       if (patch['+']?.has(value)) {
         // Patch adds the value. Potential additions and/or deletions higher up
         // in the chain are not relevant.
@@ -583,7 +586,7 @@ class SetVariable<T> extends BaseVariable<ReadonlySet<T>, SetPatch<T>> {
 
   /** Creates an equivalent Set based on the given state. */
   get(state: State): ReadonlySet<T> {
-    if (state.constructor === BaseState) {
+    if (!state.isPlanning) {
       // We don't need to assemble the cumulative set for base states.
       return (
         (state as BaseState).getVariablePatches(this).next().value?.['+'] ??
@@ -629,6 +632,105 @@ class SetVariable<T> extends BaseVariable<ReadonlySet<T>, SetPatch<T>> {
   deserialize = this.set;
 }
 
+// Patches for a Map variable.
+interface MapPatch<K, V> {
+  // Add the specified elements to the cumulative map.
+  '+'?: Map<K, V>;
+  // Remove the specified keys from the cumulative map.
+  '-'?: Set<K>;
+}
+
+class MapVariable<K, V> extends BaseVariable<
+  ReadonlyMap<K, V>,
+  MapPatch<K, V>
+> {
+  getDefault(): MapPatch<K, V> {
+    return {};
+  }
+
+  // We need set() to match the BaseVariable protocol, so this gets a different
+  // name.
+  /** Adds the value to the map in the given state (`Map.set()` equivalent). */
+  setValue(state: State, key: K, value?: V) {
+    const patch = (state as BaseState).getVariablePatch(this);
+    patch['-']?.delete(key);
+    (patch['+'] ??= new Map()).set(key, value);
+  }
+
+  /** Removes the key from the map in the given state. */
+  delete(state: State, key: K) {
+    const patch = (state as BaseState).getVariablePatch(this);
+    patch['+']?.delete(key);
+    if (state.isPlanning) {
+      (patch['-'] ??= new Set()).add(key);
+    }
+  }
+
+  /** Checks if the map contains the key in the given state. */
+  has(state: State, key: K): boolean {
+    for (const patch of (state as BaseState).getVariablePatches(this)) {
+      if (patch['+']?.has(key)) {
+        // Patch adds the key. Potential additions and/or deletions higher up in
+        // the chain are not relevant.
+        return true;
+      }
+      if (patch['-']?.has(key)) {
+        // Patch explicitly removes the value.
+        return false;
+      }
+    }
+    // Not found in any of the patches, so it does not exist.
+    return false;
+  }
+
+  /** Creates an equivalent Map based on the given state. */
+  get(state: State): ReadonlyMap<K, V> {
+    if (state.constructor === BaseState) {
+      // We don't need to assemble the cumulative set for base states.
+      return (
+        (state as BaseState).getVariablePatches(this).next().value?.['+'] ??
+        new Map()
+      );
+    }
+
+    const result = new Map<K, V>();
+    for (const patch of (state as BaseState).getVariablePatches(this, true)) {
+      patch['+']?.forEach((value, key) => result.set(key, value));
+      patch['-']?.forEach((key) => result.delete(key));
+    }
+    return result;
+  }
+
+  /** Removes all elements from the set. */
+  clear(state: State) {
+    const patch = (state as BaseState).getVariablePatch(this);
+    delete patch['+'];
+    patch['-'] = new Set(this.get(state).keys());
+    if (patch['-'].size === 0) {
+      delete patch['-'];
+    }
+  }
+
+  /** Overwrites the map. */
+  set(state: State, map: Map<K, V>) {
+    this.clear(state);
+    const patch = (state as BaseState).getVariablePatch(this);
+    patch['+'] = map;
+  }
+
+  shouldSerialize(state: State, _: boolean): boolean {
+    // The empty set is always the default, so only serialize this variable if
+    // it actually contains anything.
+    for (const _ of (state as BaseState).getVariablePatches(this)) {
+      return true;
+    }
+    return false;
+  }
+
+  serialize = this.get;
+  deserialize = this.set;
+}
+
 interface Invocable<T extends Array<unknown>> {
   invoke(state: State, ...args: T): void;
 }
@@ -647,23 +749,43 @@ class FunctionReference<
   }
 }
 
-class Signal<T extends Array<unknown>> extends SetVariable<Invocable<T>> {
+class Signal<T extends Array<unknown>> extends MapVariable<
+  number,
+  Invocable<T>
+> {
+  protected nextId = 0;
+
+  override setValue(
+    state: State,
+    key: number,
+    value?: Invocable<T> | undefined
+  ): void {
+    if (key >= this.nextId) {
+      this.nextId++;
+    }
+    super.setValue(state, key, value);
+  }
+
+  override set(state: State, map: Map<number, Invocable<T>>): void {
+    let max = this.nextId - 1;
+    for (const key of map.keys()) {
+      max = key > max ? key : max;
+    }
+    this.nextId = max + 1;
+    super.set(state, map);
+  }
+
   attach<
     E extends Entity & {[P in Name]: (state: State, ...args: T) => void},
     Name extends keyof E,
   >(state: State, entity: E, member: Name) {
-    const reference = new FunctionReference(entity, member);
-    this.add(state, reference);
-    return reference;
+    const handle = this.nextId;
+    this.setValue(state, handle, new FunctionReference(entity, member));
+    return handle;
   }
 
-  // TODO: Skriv MapVariable och använd den istället? Skulle slippa massa
-  // typstrul här.
-  detach<
-    E extends Entity & {[P in Name]: (state: State, ...args: T) => void},
-    Name extends keyof E,
-  >(state: State, reference: FunctionReference<E, Name>) {
-    this.delete(state, reference);
+  detach(state: State, handle: number) {
+    this.delete(state, handle);
   }
 
   invoke(state: State, ...data: T) {
@@ -694,7 +816,11 @@ export type SimpleVariableInterface<T> = Omit<
 >;
 export type SetVariableInterface<T> = Omit<
   SetVariable<T>,
-  keyof (Serializable<Set<T>> & Storable<SetPatch<T>>)
+  keyof (Serializable<ReadonlySet<T>> & Storable<SetPatch<T>>)
+>;
+export type MapVariableInterface<K, V> = Omit<
+  MapVariable<K, V>,
+  keyof (Serializable<ReadonlyMap<K, V>> & Storable<MapPatch<K, V>>)
 >;
 export type SignalInterface<T extends Array<unknown> = []> = Pick<
   Signal<T>,
@@ -721,6 +847,11 @@ export function variable<T>(defaultValue: T): SimpleVariableInterface<T> {
  */
 export function setVariable<T>(): SetVariableInterface<T> {
   return new SetVariable();
+}
+
+/** Map equivalent of `setVariable()`. The same considerations apply. */
+export function mapVariable<K, V>(): MapVariableInterface<K, V> {
+  return new MapVariable();
 }
 
 /** A set of references to entity methods, which may be invoked together. */

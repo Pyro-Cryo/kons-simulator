@@ -4,7 +4,7 @@ interface WaitInstruction {
 }
 
 interface SpawnInstruction<
-  T extends abstract new (...args: unknown[]) => unknown
+  T extends abstract new (...args: unknown[]) => unknown,
 > {
   keyword: 'spawn';
   type: T;

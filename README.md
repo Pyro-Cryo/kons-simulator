@@ -126,7 +126,7 @@ För att få lite variation har de också olika personlighetsdrag och humörsmä
 
 ## Utvecklingsmiljö
 
-* Linter är eslint. Behöver installeras lokalt med t.ex. npm: `npm install eslint typescript-eslint @eslint/css @eslint/markdown --save-dev`. Sedan kan den användas tillsammans med sin [VS Code-extension](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint).
+* Linter är eslint. Behöver installeras lokalt med t.ex. npm: `npm install eslint typescript-eslint eslint-plugin-prettier @eslint/css @eslint/markdown --save-dev`. Sedan kan den användas tillsammans med sin [VS Code-extension](https://marketplace.visualstudio.com/items?itemName=dbaeumer.vscode-eslint).
 * Prettier som formatter, finns t.ex. som [VS Code-extension](https://marketplace.visualstudio.com/items?itemName=esbenp.prettier-vscode).
 * Installera typescript med `npm install -g typescript`, bygg sen med `tsc -p .` i rotmappen eller [sätt upp VS Code](https://code.visualstudio.com/docs/typescript/typescript-compiling) och tryck `Ctrl + Shift + B`:
 ```json

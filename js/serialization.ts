@@ -50,8 +50,16 @@ export class JsonSerializer {
       this.deserializeSymbol(description)
     );
     // Other common collections.
-    this.addClass(Set, (set) => Array.from(set), (array) => new Set(array));
-    this.addClass(Map, (map) => Array.from(map), (array) => new Map(array));
+    this.addClass(
+      Set,
+      (set) => Array.from(set),
+      (array) => new Set(array)
+    );
+    this.addClass(
+      Map,
+      (map) => Array.from(map),
+      (array) => new Map(array)
+    );
   }
 
   /** Register a symbol so that it can be (de)serialized. */
@@ -165,7 +173,7 @@ export class JsonSerializer {
       typeof serialized === 'object' &&
       serialized !== null &&
       !(serialized instanceof Array) &&
-      !(TYPE in serialized) 
+      !(TYPE in serialized)
     ) {
       // Insert type information so it can be deserialized.
       serialized[TYPE] = key;

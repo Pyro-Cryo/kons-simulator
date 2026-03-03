@@ -32,7 +32,7 @@ export class GameArea {
     private readonly canvas: HTMLCanvasElement,
     gridWidth: number | null,
     gridHeight: number | null,
-    public gridOrigin = GridOrigin.UPPER_LEFT,
+    public gridOrigin = GridOrigin.UPPER_LEFT
   ) {
     const context = this.canvas.getContext('2d');
     if (!context) {
