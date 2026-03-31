@@ -1,5 +1,6 @@
 import {assertThat} from '../engine/assertions.js';
 import {Suite} from '../engine/testing.js';
+import { Minheap } from '../engine/containers.js';
 import {
   Lunchbox,
   TastyLunchbox,
@@ -10,6 +11,7 @@ import {
   setVariable,
   signal,
   State,
+  SimpleVariableInterface
 } from '../state.js';
 
 export class StateSuite extends Suite {
@@ -24,6 +26,7 @@ export class StateSuite extends Suite {
     class Microwave extends Entity {
       private model = variable('Electrolux');
       private power = variable(1000);
+      heap = variable(new Minheap());
       buttonLabels = setVariable<string>();
       containedLunchbox = variable<Lunchbox | null>(null);
 
@@ -45,6 +48,8 @@ export class StateSuite extends Suite {
     microwave.buttonLabels.add(state, 'start');
     microwave.buttonLabels.add(state, 'stop');
     microwave.containedLunchbox.set(state, lunchbox);
+    microwave.heap.getMutable(state).peek();
+
     lunchbox2.heat(state);
     state.destroy(lunchbox2);
     lunchbox3.heat(state);

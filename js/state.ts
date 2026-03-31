@@ -472,6 +472,10 @@ export function createState(serialized?: string): State {
   return new BaseState();
 }
 
+interface Copyable {
+  copy(): this;
+}
+
 interface Storable<T> {
   id: VariableId;
   getDefault(): T;
@@ -514,6 +518,19 @@ class SimpleVariable<T> extends BaseVariable<T> {
    */
   get(state: State): Readonly<T> {
     return (state as BaseState).getVariable(this);
+  }
+
+  /**
+   * Gets the value of the given variable that is safe to edit, making a copy if
+   * necessary.
+   * @param state The state to get the variable from.
+   * @returns The variable's value, or its default value if it is not set.
+   */
+  getMutable(state: State): T {
+    const original = this.get(state) as T & Copyable;
+    const copy = original.copy();
+    this.set(state, copy);
+    return copy;
   }
 
   /**
@@ -777,7 +794,7 @@ class Signal<T extends Array<unknown>> extends MapVariable<
 
   attach<
     E extends Entity & {[P in Name]: (state: State, ...args: T) => void},
-    Name extends keyof E,
+    Name extends keyof E
   >(state: State, entity: E, member: Name) {
     const handle = this.nextId;
     this.setValue(state, handle, new FunctionReference(entity, member));
@@ -810,9 +827,13 @@ class Signal<T extends Array<unknown>> extends MapVariable<
   }
 }
 
-export type SimpleVariableInterface<T> = Omit<
+export type MutableSimpleVariableInterface<T extends Copyable> = Omit<
   SimpleVariable<T>,
   keyof (Serializable<T> & Storable<T>)
+>;
+export type SimpleVariableInterface<T> = Omit<
+  SimpleVariable<T>,
+  keyof (Serializable<T> & Storable<T>) | 'getMutable'
 >;
 export type SetVariableInterface<T> = Omit<
   SetVariable<T>,
@@ -828,7 +849,9 @@ export type SignalInterface<T extends Array<unknown> = []> = Pick<
 >;
 
 /** Variable storing an immutable, serializable value. */
-export function variable<T>(defaultValue: T): SimpleVariableInterface<T> {
+export function variable<T extends Copyable>(defaultValue: T): MutableSimpleVariableInterface<T>;
+export function variable<T>(defaultValue: T): SimpleVariableInterface<T>;
+export function variable<T>(defaultValue: T): unknown {
   return new SimpleVariable(defaultValue);
 }
 

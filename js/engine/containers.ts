@@ -1,6 +1,6 @@
 /** A doubly linked list node. */
 interface Node<T> {
-  obj: T;
+  readonly obj: T;
   prev: Node<T> | null;
   next: Node<T> | null;
 }
@@ -155,8 +155,8 @@ export class LinkedList<T> {
 }
 
 interface HeapNode<T> {
-  obj: T;
-  weight: number;
+  readonly obj: T;
+  readonly weight: number;
 }
 
 /**
@@ -267,5 +267,14 @@ export class Minheap<T> {
     for (const element of this.elements) {
       yield element.obj;
     }
+  }
+
+  /**
+   * Returns a shallow copy of this minheap.
+   */
+  copy(): Minheap<T> {
+    const copy = new Minheap<T>();
+    copy.elements = this.elements.slice();
+    return copy;
   }
 }
