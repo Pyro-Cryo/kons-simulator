@@ -1,13 +1,5 @@
+import { Minheap } from './engine/containers.js';
 import {JsonSerializer, NativelySerializable} from './serialization.js';
-
-// export interface State {
-//   // create(/* TODO */): EntityReference;
-//   // lookup(reference: EntityReference): Entity<never>;
-//   // branch(): DerivedState;
-//   // advance(delta: number): void;
-//   getVariable<T>(variable: Var<T>): T;
-//   setVariable<T>(variable: Var<T>, value: T): void;
-// }
 
 type EntityId = number;
 type VariableId = number;
@@ -54,7 +46,8 @@ interface SerializerConfig {
   stringifyParams?: StringifyParams;
 }
 
-export class Entity {
+export class Entity implements Partial<Advancable> {
+  advance?(state: State, delta: number): void;
   constructor(readonly id: EntityId) {}
 }
 
@@ -112,6 +105,31 @@ class BaseState {
   protected readonly entities = new Map<EntityId, Entity>();
 
   protected nextId: EntityId = 0;
+  private clockInstance?: Clock;
+
+  constructor({addClock}: {addClock: boolean}) {
+    if (addClock) {
+      this.clockInstance = this.create(Clock);
+    }
+  }
+
+  get clock() {
+    if (this.clockInstance === undefined) {
+      // Find the clock instance after restoring a saved state via parse().
+      for (const entity of this.entities.values()) {
+        if (entity instanceof Clock) {
+          this.clockInstance = entity;
+          break;
+        }
+      }
+    }
+    return this.clockInstance;
+  }
+
+  /** Returns whether the given variable is overridden in the current state. */
+  hasVariable<T>(variable: Storable<T>): boolean {
+    return this.variables.has(variable.id);
+  }
 
   /**
    * Gets the value of the given variable.
@@ -214,6 +232,13 @@ class BaseState {
   /** Iterates over all entities that exist in the current state. */
   *iterate(): Generator<Entity, void, unknown> {
     yield* this.entities.values();
+  }
+
+  /** Advances the clock and all advancable entities by the specified amount. */
+  advance(delta: number) {
+    for (const entity of this.iterate()) {
+      entity.advance?.(this, delta);
+    }
   }
 
   /**
@@ -345,7 +370,7 @@ class BaseState {
    * @returns The recreated state.
    */
   static parse(string: string): State {
-    const state = new BaseState();
+    const state = new BaseState({addClock: false});
     const serializerConfig: SerializerConfig = {
       minimalEntities: false,
       variableMapping: new Map(),
@@ -380,9 +405,13 @@ class DerivedState extends BaseState {
   private deleted = new Set<EntityId>();
 
   constructor(private readonly original: BaseState) {
-    super();
+    super({addClock: false});
     // Typescript har tydligen en väldigt konstig tolkning av "protected".
     this.nextId = (original as DerivedState).nextId;
+  }
+
+  override get clock() {
+    return this.original.clock;
   }
 
   /**
@@ -457,7 +486,7 @@ class DerivedState extends BaseState {
  */
 export type State = Pick<
   BaseState,
-  'isPlanning' | 'create' | 'destroy' | 'iterate' | 'stringify' | 'fork'
+  'isPlanning' | 'create' | 'destroy' | 'iterate' | 'stringify' | 'fork' | 'clock'
 >;
 
 /**
@@ -469,7 +498,7 @@ export function createState(serialized?: string): State {
   if (serialized !== undefined) {
     return BaseState.parse(serialized);
   }
-  return new BaseState();
+  return new BaseState({addClock: true});
 }
 
 interface Copyable {
@@ -527,8 +556,14 @@ class SimpleVariable<T> extends BaseVariable<T> {
    * @returns The variable's value, or its default value if it is not set.
    */
   getMutable(state: State): T {
-    const original = this.get(state) as T & Copyable;
-    const copy = original.copy();
+    if ((state as BaseState).hasVariable(this)) {
+      return this.get(state);
+    }
+    const original = this.get(state);
+    if (original === null || original === undefined) {
+      return original;
+    }
+    const copy = (original as T & Copyable).copy();
     this.set(state, copy);
     return copy;
   }
@@ -795,7 +830,7 @@ class Signal<T extends Array<unknown>> extends MapVariable<
   attach<
     E extends Entity & {[P in Name]: (state: State, ...args: T) => void},
     Name extends keyof E
-  >(state: State, entity: E, member: Name) {
+  >(state: State, entity: E, member: Name): number {
     const handle = this.nextId;
     this.setValue(state, handle, new FunctionReference(entity, member));
     return handle;
@@ -827,10 +862,9 @@ class Signal<T extends Array<unknown>> extends MapVariable<
   }
 }
 
-export type MutableSimpleVariableInterface<T extends Copyable> = Omit<
-  SimpleVariable<T>,
-  keyof (Serializable<T> & Storable<T>)
->;
+export type MutableSimpleVariableInterface<
+  T extends Copyable | null | undefined
+> = Omit<SimpleVariable<T>, keyof (Serializable<T> & Storable<T>)>;
 export type SimpleVariableInterface<T> = Omit<
   SimpleVariable<T>,
   keyof (Serializable<T> & Storable<T>) | 'getMutable'
@@ -848,8 +882,10 @@ export type SignalInterface<T extends Array<unknown> = []> = Pick<
   'attach' | 'delete' | 'invoke'
 >;
 
-/** Variable storing an immutable, serializable value. */
-export function variable<T extends Copyable>(defaultValue: T): MutableSimpleVariableInterface<T>;
+/** Variable storing a serializable value. */
+export function variable<T extends Copyable | null | undefined>(
+  defaultValue: T
+): MutableSimpleVariableInterface<T>;
 export function variable<T>(defaultValue: T): SimpleVariableInterface<T>;
 export function variable<T>(defaultValue: T): unknown {
   return new SimpleVariable(defaultValue);
@@ -880,6 +916,52 @@ export function mapVariable<K, V>(): MapVariableInterface<K, V> {
 /** A set of references to entity methods, which may be invoked together. */
 export function signal<T extends Array<unknown> = []>(): SignalInterface<T> {
   return new Signal<T>();
+}
+
+interface Advancable {
+  advance(state: State, delta: number): void;
+}
+
+class Clock extends Entity implements Advancable {
+  private readonly scheduled = variable(new Minheap<Invocable<[]>>());
+  private readonly elapsed = variable(0);
+
+  getElapsed(state: State): number {
+    return this.elapsed.get(state);
+  }
+
+  after(state: State, delta: number): number {
+    return this.elapsed.get(state) + delta;
+  }
+
+  scheduleAt<
+    E extends Entity & {[P in Name]: (state: State) => void},
+    Name extends keyof E
+  >(state: State, entity: E, member: Name, timestamp: number): void {
+    const invocable = new FunctionReference(entity, member);
+    this.scheduled.getMutable(state).push(invocable, timestamp);
+  }
+
+  scheduleAfter<
+    E extends Entity & {[P in Name]: (state: State) => void},
+    Name extends keyof E
+  >(state: State, entity: E, member: Name, delta: number): void {
+    this.scheduleAt(state, entity, member, this.after(state, delta));
+  }
+
+  advance(state: State, delta: number): void {
+    const elapsed = this.elapsed.get(state) + delta;
+    this.elapsed.set(state, elapsed);
+
+    let scheduled = this.scheduled.get(state);
+    if (!scheduled.isEmpty() && scheduled.peekWeight() <= elapsed) {
+      // We will need to modify the heap.
+      scheduled = this.scheduled.getMutable(state);
+    }
+    while (!scheduled.isEmpty() && scheduled.peekWeight() <= elapsed) {
+      scheduled.pop().invoke(state);
+    }
+  }
 }
 
 /** Only for use in tests. */
