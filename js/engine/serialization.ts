@@ -22,6 +22,22 @@ export type Serializable =
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Type = abstract new (...args: any[]) => any;
+interface InstanceWithSerializer<S> {
+  serialize(): S;
+}
+/**
+ * A class definition that specifies a serializer on its instances and a static
+ * deserializer.
+ */
+export interface SerializableClass<T extends InstanceWithSerializer<S>, S>
+  extends Type {
+  deserialize(serialized: S): T;
+}
+
+// interface SerializableClass<S, T> {
+//   // new(...args: ConstructorParameters<this>): T;
+//   deserialize(serialized: S): T;
+// }
 
 const TYPE = '#type';
 const VALUE = '#val';
@@ -120,6 +136,24 @@ export class JsonSerializer {
     }
     this.serializers.set(type, {key, serializer});
     this.deserializers.set(key, deserializer);
+  }
+
+  /**
+   * Register a class to make it serializable.
+   * @param type The type to register.
+   * @param key The "key" used to disambiguate different types after they have
+   *   been serialized. Defaults to the name of the Type. Must be unique.
+   */
+  addSerializableClass<S, I extends InstanceWithSerializer<S>>(
+    type: SerializableClass<I, S>,
+    key?: string
+  ) {
+    this.addClass(
+      type,
+      (instance) => instance.serialize(),
+      (serialized) => type.deserialize(serialized),
+      key
+    );
   }
 
   /**

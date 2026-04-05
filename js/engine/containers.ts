@@ -277,4 +277,17 @@ export class Minheap<T> {
     copy.elements = this.elements.slice();
     return copy;
   }
+
+  /** Serializes the minheap to an array. */
+  serialize(): Array<[T, number]> {
+    return this.elements.map(({obj, weight}) => [obj, weight]);
+  }
+
+
+  /** Deserializes a minheap from an array. */
+  static deserialize<T>(serialized: Array<[T, number]>): Minheap<T> {
+    const heap = new Minheap<T>();
+    heap.elements = serialized.map(([obj, weight]) => ({obj, weight}));
+    return heap;
+  }
 }

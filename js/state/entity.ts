@@ -70,4 +70,15 @@ export class FunctionReference<
   invoke(...data: Parameters<E[Name]>) {
     this.entity[this.member](...data);
   }
+
+  serialize(): [E, Name] {
+    return [this.entity, this.member];
+  }
+
+  static deserialize<
+    E extends Entity & {[P in Name]: Callable},
+    Name extends keyof E
+  >([entity, member]: [E, Name]) {
+    return new FunctionReference(entity, member);
+  }
 }

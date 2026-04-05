@@ -9,6 +9,7 @@ import {
 import {Clock} from './clock.js';
 import {JsonSerializer, NativelySerializable} from '../engine/serialization.js';
 import {BaseVariable, VariableId, Serializable, Storable} from './variable.js';
+import {Minheap} from '../engine/containers.js';
 
 type VariableMapping = Map<VariableId, Serializable<unknown>>;
 
@@ -264,11 +265,8 @@ export class BaseState implements State {
         (serialized) => this.deserializeEntity(entityClass, serialized, config)
       )
     );
-    serializer.addClass(
-      FunctionReference,
-      (reference) => [reference.entity, reference.member],
-      ([entity, member]) => new FunctionReference(entity, member)
-    );
+    serializer.addSerializableClass(FunctionReference);
+    serializer.addSerializableClass(Minheap);
     return serializer;
   }
 
