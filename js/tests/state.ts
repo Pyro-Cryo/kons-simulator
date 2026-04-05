@@ -1,6 +1,6 @@
 import {assertThat} from '../engine/assertions.js';
 import {Suite} from '../engine/testing.js';
-import { Minheap } from '../engine/containers.js';
+import {Minheap} from '../engine/containers.js';
 import {
   Lunchbox,
   TastyLunchbox,

@@ -1,5 +1,5 @@
 import { Minheap } from './engine/containers.js';
-import {JsonSerializer, NativelySerializable} from './serialization.js';
+import {JsonSerializer, NativelySerializable} from './engine/serialization.js';
 
 type EntityId = number;
 type VariableId = number;

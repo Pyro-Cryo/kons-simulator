@@ -1,5 +1,5 @@
-import {assertThat, assertThrows} from '../engine/assertions.js';
-import {parameters, Suite} from '../engine/testing.js';
+import {assertThat, assertThrows} from '../assertions.js';
+import {parameters, Suite} from '../testing.js';
 import {JsonSerializer, TEST_ONLY} from '../serialization.js';
 
 export class SerializationSuite extends Suite {

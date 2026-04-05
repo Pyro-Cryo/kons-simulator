@@ -1,4 +1,4 @@
-import {toString} from './engine/utils.js';
+import {toString} from './utils.js';
 
 type JsonPrimitive = number | string | boolean | null;
 /**
@@ -21,7 +21,7 @@ export type Serializable =
   | Array<Serializable>;
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-type Type = abstract new (...args: any) => any;
+type Type = abstract new (...args: any[]) => any;
 
 const TYPE = '#type';
 const VALUE = '#val';
