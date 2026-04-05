@@ -1,18 +1,28 @@
-import {assertThat} from '../engine/assertions.js';
-import {Suite} from '../engine/testing.js';
-import {Minheap} from '../engine/containers.js';
+import {assertThat} from '../../engine/assertions.js';
+import {Suite} from '../../engine/testing.js';
+import {Minheap} from '../../engine/containers.js';
 import {
-  Lunchbox,
-  TastyLunchbox,
   Entity,
   variable,
   registerEntity,
+  registerEntities,
   createState,
   setVariable,
   signal,
-  State,
-  SimpleVariableInterface
-} from '../state.js';
+  State
+} from '../index.js';
+
+export class Lunchbox extends Entity {
+  readonly temperature = variable(20);
+
+  heat(state: State) {
+    this.temperature.set(state, 30);
+  }
+}
+
+export class TastyLunchbox extends Lunchbox {
+  readonly tasteRating = variable(5);
+}
 
 export class StateSuite extends Suite {
   testSerializeAndDeserialize() {
@@ -26,7 +36,7 @@ export class StateSuite extends Suite {
     class Microwave extends Entity {
       private model = variable('Electrolux');
       private power = variable(1000);
-      heap = variable(new Minheap());
+      heap = variable(new Minheap<string>());
       buttonLabels = setVariable<string>();
       containedLunchbox = variable<Lunchbox | null>(null);
 
@@ -48,7 +58,7 @@ export class StateSuite extends Suite {
     microwave.buttonLabels.add(state, 'start');
     microwave.buttonLabels.add(state, 'stop');
     microwave.containedLunchbox.set(state, lunchbox);
-    microwave.heap.getMutable(state).peek();
+    microwave.heap.getMutable(state).push("test", 123);
 
     lunchbox2.heat(state);
     state.destroy(lunchbox2);
@@ -76,3 +86,6 @@ export class StateSuite extends Suite {
     console.log(createState(derived.stringify()));
   }
 }
+
+import * as thisModule from './state.js';
+registerEntities(thisModule);
