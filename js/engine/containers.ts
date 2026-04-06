@@ -152,6 +152,17 @@ export class LinkedList<T> {
   toArray(): T[] {
     return [...this];
   }
+
+  /** Returns a shallow copy of this linked list. */
+  copy(): LinkedList<T> {
+    return new LinkedList(this);
+  }
+
+  serialize = this.toArray;
+
+  static deserialize<T>(serialized: T[]) {
+    return new LinkedList(serialized);
+  }
 }
 
 interface HeapNode<T> {

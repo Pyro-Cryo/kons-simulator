@@ -210,7 +210,7 @@ class MapVariable<K, V> extends BaseVariable<
 
   /** Creates an equivalent Map based on the given state. */
   get(state: State): ReadonlyMap<K, V> {
-    if (state.constructor === BaseState) {
+    if (!state.isPlanning) {
       // We don't need to assemble the cumulative set for base states.
       return (
         (state as BaseState).getVariablePatches(this).next().value?.['+'] ??
