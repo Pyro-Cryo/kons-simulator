@@ -8,6 +8,7 @@ interface Copyable {
 }
 
 class SimpleVariable<T> extends BaseVariable<T> {
+  private onChange?: SignalInterface<[T]>;
   constructor(public readonly defaultValue: T) {
     super();
   }
@@ -49,6 +50,16 @@ class SimpleVariable<T> extends BaseVariable<T> {
    */
   set(state: State, value: T) {
     (state as BaseState).setVariable(this, value);
+    this.onChange?.invoke(state, value);
+  }
+
+  /**
+   * Gets a signal that is invoked whenever this value is `set()`. Changes to
+   * mutable values (via `getMutable()`) are not captured.
+   */
+  onChangeSignal(): SignalInterface<[T]> {
+    this.onChange ??= signal();
+    return this.onChange;
   }
 
   getDefault(): Readonly<T> {
@@ -60,7 +71,11 @@ class SimpleVariable<T> extends BaseVariable<T> {
   }
 
   serialize = this.get;
-  deserialize = this.set;
+
+  deserialize(state: State, serialized: T): void {
+    // Same as get(), except we don't invoke the onChange signal.
+    (state as BaseState).setVariable(this, serialized);
+  }
 }
 
 // Patches for a Set variable.
@@ -282,6 +297,7 @@ class Signal<T extends Array<unknown>> extends MapVariable<
     super.set(state, map);
   }
 
+  // TODO: Add a oneshot variant?
   attach<
     E extends Entity & {[P in Name]: (state: State, ...args: T) => void},
     Name extends keyof E

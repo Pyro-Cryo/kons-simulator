@@ -61,6 +61,7 @@ export interface Invocable<T extends Array<unknown>> {
   invoke(state: State, ...args: T): void;
 }
 
+// TODO: Add a variant with bound arguments?
 export class FunctionReference<
   E extends Entity & {[P in Name]: Callable},
   Name extends keyof E
