@@ -55,7 +55,8 @@ class SimpleVariable<T> extends BaseVariable<T> {
 
   /**
    * Gets a signal that is invoked whenever this value is `set()`. Changes to
-   * mutable values (via `getMutable()`) are not captured.
+   * mutable values (via `getMutable()`) are not captured. The result must be
+   * stored on an entity to persist after serialization.
    */
   onChangeSignal(): SignalInterface<[T]> {
     this.onChange ??= signal();
@@ -271,11 +272,16 @@ class MapVariable<K, V> extends BaseVariable<
   deserialize = this.set;
 }
 
-class Signal<T extends Array<unknown>> extends MapVariable<
-  number,
-  Invocable<T>
-> {
+// TODO: Add helpers for making derived signals?
+class Signal<T extends Array<unknown>>
+  extends MapVariable<number, Invocable<T>>
+  implements Invocable<T>
+{
   protected nextId = 0;
+
+  // Assuming that derived signals are always stored as fields on entities, and
+  // never created dynamically, we can use a regular field here.
+  private ephemeralCallbacks = new Set<(state: State, ...args: T) => void>();
 
   override setValue(
     state: State,
@@ -300,7 +306,7 @@ class Signal<T extends Array<unknown>> extends MapVariable<
   // TODO: Add a oneshot variant?
   attach<
     E extends Entity & {[P in Name]: (state: State, ...args: T) => void},
-    Name extends keyof E
+    Name extends keyof E,
   >(state: State, entity: E, member: Name): number {
     const handle = this.nextId;
     this.setValue(state, handle, new FunctionReference(entity, member));
@@ -312,29 +318,37 @@ class Signal<T extends Array<unknown>> extends MapVariable<
   }
 
   invoke(state: State, ...data: T) {
-    const errors = [];
     for (const invocable of this.get(state).values()) {
       try {
         invocable.invoke(state, ...data);
       } catch (e) {
-        errors.push(e);
+        console.error(e);
       }
     }
+  }
 
-    if (errors.length === 0) {
-      return;
-    }
-    if (errors.length === 1) {
-      throw errors[0];
-    }
-    throw new Error(
-      'Multiple errors occurred:\n' + errors.map((e) => `- ${e}`).join('\n')
-    );
+  derive<R extends Array<unknown> = T>({
+    filter,
+    map,
+  }: {
+    filter?: (state: State, ...args: T) => boolean;
+    map?: (state: State, ...args: T) => R;
+  }): SignalInterface<R> {
+    const derivedSignal = signal<R>();
+    this.ephemeralCallbacks.add((state: State, ...args: T) => {
+      if (filter && !filter(state, ...args)) {
+        return;
+      }
+      const mappedArgs = map ? map(state, ...args) : args;
+      derivedSignal.invoke(state, ...mappedArgs as R);
+    });
+
+    return derivedSignal;
   }
 }
 
 export type MutableSimpleVariableInterface<
-  T extends Copyable | null | undefined
+  T extends Copyable | null | undefined,
 > = Omit<SimpleVariable<T>, keyof (Serializable<T> & Storable<T>)>;
 export type SimpleVariableInterface<T> = Omit<
   SimpleVariable<T>,
