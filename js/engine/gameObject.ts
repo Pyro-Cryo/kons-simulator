@@ -209,7 +209,11 @@ export class GameObject extends PrerenderedObject {
   id: number | null = null;
   despawnTimer: number = -1;
 
-  constructor(public x: number, public y: number, register = true) {
+  constructor(
+    public x: number,
+    public y: number,
+    register = true
+  ) {
     super();
     if (register) {
       this.register();
@@ -289,7 +293,6 @@ export class EffectObject extends GameObject {
     for (
       let it = this.effects.values(), effect = null;
       (effect = it.next().value);
-
     ) {
       if (effect.constructor === effect.constructor) {
         effect.cdtime = effect.cooldown;

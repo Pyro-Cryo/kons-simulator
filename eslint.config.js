@@ -4,11 +4,12 @@ import tseslint from 'typescript-eslint';
 import markdown from '@eslint/markdown';
 import css from '@eslint/css';
 import {defineConfig} from 'eslint/config';
+import eslintPluginPrettier from 'eslint-plugin-prettier';
 
 export default defineConfig([
   {
     files: ['js/**/*.{js,mjs,cjs,ts,mts,cts}'],
-    plugins: {js},
+    plugins: {js, eslintPluginPrettier}, 
     extends: ['js/recommended'],
     languageOptions: {globals: globals.browser},
     rules: {
@@ -23,7 +24,6 @@ export default defineConfig([
           ignoreRegExpLiterals: true,
         },
       ],
-      indent: ['warn', 2, {SwitchCase: 1, offsetTernaryExpressions: true}],
       '@typescript-eslint/no-unused-vars': [
         'warn',
         {

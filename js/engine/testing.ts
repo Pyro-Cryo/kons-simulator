@@ -274,7 +274,7 @@ export function logResults(
 // https://devblogs.microsoft.com/typescript/announcing-typescript-5-0/#writing-well-typed-decorators
 export function parameters<
   This extends Suite,
-  T extends (...args: never[]) => void
+  T extends (...args: never[]) => void,
 >(
   ...args: Parameters<T>[]
 ): (

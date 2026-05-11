@@ -12,8 +12,12 @@
         MinheapSuite,
       } from './out/engine/tests/containers.js';
       import {UtilsSuite} from './out/engine/tests/utils.js';
+      import {SerializationSuite} from './out/tests/serialization.js';
+      import {StateSuite} from './out/state/tests/state.js';
 
       const tests = [
+        SerializationSuite,
+        StateSuite,
         AssertionsSuite,
         TestingSuite,
         LinkedListSuite,

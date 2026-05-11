@@ -199,13 +199,18 @@ class SubjectBase<T> {
           'Expected non-object, got: {value}'
         );
         break;
-      default:
+      default: {
+        const actual =
+          typeof this.value === 'object'
+            ? (this.value?.constructor.name ?? 'null')
+            : typeof this.value;
         this.evaluate(
           this.value instanceof type,
-          `Expected a(n) {expected}, got: {value} ({type})`,
+          `Expected a(n) {expected}, got: {value} ({actual})`,
           `Expected non-{expected}, got: {value}`,
-          {expected: type.name, type}
+          {expected: type.name, actual}
         );
+      }
     }
   }
 }
@@ -615,7 +620,7 @@ export function assertThat<
   T extends Exclude<
     unknown,
     number | Iterable<never> | MappingLike<never, never>
-  >
+  >,
 >(value: T): SubjectBase<T>;
 export function assertThat(value: unknown): SubjectBase<unknown> {
   if (value === null || value === undefined) {

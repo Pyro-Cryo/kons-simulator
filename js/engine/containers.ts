@@ -1,6 +1,6 @@
 /** A doubly linked list node. */
 interface Node<T> {
-  obj: T;
+  readonly obj: T;
   prev: Node<T> | null;
   next: Node<T> | null;
 }
@@ -152,11 +152,22 @@ export class LinkedList<T> {
   toArray(): T[] {
     return [...this];
   }
+
+  /** Returns a shallow copy of this linked list. */
+  copy(): LinkedList<T> {
+    return new LinkedList(this);
+  }
+
+  serialize = this.toArray;
+
+  static deserialize<T>(serialized: T[]) {
+    return new LinkedList(serialized);
+  }
 }
 
 interface HeapNode<T> {
-  obj: T;
-  weight: number;
+  readonly obj: T;
+  readonly weight: number;
 }
 
 /**
@@ -267,5 +278,27 @@ export class Minheap<T> {
     for (const element of this.elements) {
       yield element.obj;
     }
+  }
+
+  /**
+   * Returns a shallow copy of this minheap.
+   */
+  copy(): Minheap<T> {
+    const copy = new Minheap<T>();
+    copy.elements = this.elements.slice();
+    return copy;
+  }
+
+  /** Serializes the minheap to an array. */
+  serialize(): Array<[T, number]> {
+    return this.elements.map(({obj, weight}) => [obj, weight]);
+  }
+
+
+  /** Deserializes a minheap from an array. */
+  static deserialize<T>(serialized: Array<[T, number]>): Minheap<T> {
+    const heap = new Minheap<T>();
+    heap.elements = serialized.map(([obj, weight]) => ({obj, weight}));
+    return heap;
   }
 }

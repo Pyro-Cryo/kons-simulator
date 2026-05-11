@@ -159,7 +159,7 @@ class Resources {
 
 const RESPONSE_GETTERS = new Map<
   ResourceType,
-  ((response: Response) => Promise<Resource<ResourceType>>)
+  (response: Response) => Promise<Resource<ResourceType>>
 >([
   [JSON, (response: Response) => response.json()],
   [String, (response: Response) => response.text()],
