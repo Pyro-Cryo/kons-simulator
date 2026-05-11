@@ -1,16 +1,10 @@
 import {assertThat} from '../../engine/assertions.js';
 import {Suite} from '../../engine/testing.js';
 import {Minheap} from '../../engine/containers.js';
-import {
-  Entity,
-  variable,
-  registerEntity,
-  registerEntities,
-  createState,
-  setVariable,
-  signal,
-  State
-} from '../index.js';
+import {Entity, registerEntity, registerEntities} from '../entity.js';
+import {createState} from '../stateImpl.js';
+import {variable, setVariable, signal} from '../variableImpl.js';
+import {State} from '../state.js';
 
 export class Lunchbox extends Entity {
   readonly temperature = variable(20);
@@ -58,7 +52,7 @@ export class StateSuite extends Suite {
     microwave.buttonLabels.add(state, 'start');
     microwave.buttonLabels.add(state, 'stop');
     microwave.containedLunchbox.set(state, lunchbox);
-    microwave.heap.getMutable(state).push("test", 123);
+    microwave.heap.getMutable(state).push('test', 123);
 
     lunchbox2.heat(state);
     state.destroy(lunchbox2);
