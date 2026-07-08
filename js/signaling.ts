@@ -1,48 +1,59 @@
-type Callback<T> = (data: T) => unknown;
+type Callback<T> = (data: T) => void;
+type CallbackHandle = number;
 
 export class Signal<T = void> {
-  private callbacks = new Set<Callback<T>>();
+  private nextId: CallbackHandle = 0;
+  private readonly callbacks = new Map<CallbackHandle, Callback<T>>();
 
-  attach(callback: Callback<T>) {
-    this.callbacks.add(callback);
+  attach(callback: Callback<T>): CallbackHandle {
+    const id = this.nextId++;
+    this.callbacks.set(id, callback);
+    return id;
   }
 
-  detach(callback: Callback<T>) {
-    this.callbacks.delete(callback);
+  attachOnce(callback: Callback<T>): CallbackHandle {
+    const id = this.nextId++;
+    const callbackWithDeletion = (data: T) => {
+      callback(data);
+      this.detach(id);
+    };
+    this.attach(callbackWithDeletion);
+    return id;
+  }
+
+  next(): Promise<T> {
+    return new Promise((resolve) => this.attachOnce(resolve));
+  }
+
+  detach(handle: CallbackHandle): boolean {
+    return this.callbacks.delete(handle);
   }
 
   invoke(data: T) {
-    this.callbacks.forEach((cb) => cb(data));
-  }
-}
-
-// Tidigare försök
-export class SignalObserver {
-  private callbacks = new Map<string, ((args: never) => unknown)[]>();
-
-  register(name: string, callback: (args: never) => unknown) {
-    let array = this.callbacks.get(name);
-    if (array === undefined) {
-      array = [];
-      this.callbacks.set(name, array);
+    for (const callback of this.callbacks.values()) {
+      try {
+        callback(data);
+      } catch (e) {
+        console.error(e);
+      }
     }
-    array.push(callback);
   }
 
-  unregister(name: string, callback: (arg: never) => unknown): boolean {
-    const array = this.callbacks.get(name);
-    const index = array?.indexOf(callback) ?? -1;
-    if (index === -1) {
-      return false;
-    }
-    array!.splice(index, 1);
-    return true;
+  derive(): Signal<T> {
+    const signal = new Signal<T>();
+    this.attach((data) => signal.invoke(data));
+    return signal;
   }
 
-  /**
-   * Invokes all callbacks registered under `name` with `data`.
-   */
-  send(name: string, data: unknown = null) {
-    this.callbacks.get(name)?.forEach((callback) => callback(data as never));
+  map<T2>(transform: (data: T) => T2): Signal<T2> {
+    const signal = new Signal<T2>();
+    this.attach((data: T) => signal.invoke(transform(data)));
+    return signal;
+  }
+
+  filter(precondition: (data: T) => boolean): Signal<T> {
+    const signal = new Signal<T>();
+    this.attach((data: T) => (precondition(data) ? signal.invoke(data) : null));
+    return signal;
   }
 }
